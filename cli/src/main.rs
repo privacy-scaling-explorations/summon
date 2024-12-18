@@ -5,11 +5,9 @@ use std::{
 };
 
 use boolify::boolify;
-pub use handle_diagnostics_cli::handle_diagnostics_cli;
 use serde_json::to_string_pretty;
+use summon_cli::handle_diagnostics_cli;
 use summon_compiler::{bristol_depth, compile, resolve_entry_path, CompileOk};
-
-mod handle_diagnostics_cli;
 
 fn main() {
   let args: Vec<String> = std::env::args().collect();
