@@ -5,7 +5,7 @@ use std::{
 };
 
 use boolify::boolify;
-use handle_diagnostics_cli::handle_diagnostics_cli;
+pub use handle_diagnostics_cli::handle_diagnostics_cli;
 use serde_json::to_string_pretty;
 use summon_compiler::{bristol_depth, compile, resolve_entry_path, CompileOk};
 

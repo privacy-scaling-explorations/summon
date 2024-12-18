@@ -257,20 +257,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cli"
-version = "0.1.0"
-dependencies = [
- "boolify",
- "bristol-circuit 0.1.0 (git+https://github.com/voltrevo/bristol-circuit?rev=2394ccc)",
- "serde",
- "serde_json",
- "serde_qs",
- "summon_compiler",
- "url",
- "valuescript_compiler",
-]
-
-[[package]]
 name = "cpufeatures"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1501,6 +1487,20 @@ dependencies = [
  "quote",
  "rustversion",
  "syn 1.0.91",
+]
+
+[[package]]
+name = "summon_cli"
+version = "0.1.0"
+dependencies = [
+ "boolify",
+ "bristol-circuit 0.1.0 (git+https://github.com/voltrevo/bristol-circuit?rev=2394ccc)",
+ "serde",
+ "serde_json",
+ "serde_qs",
+ "summon_compiler",
+ "url",
+ "valuescript_compiler",
 ]
 
 [[package]]

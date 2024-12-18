@@ -81,7 +81,7 @@ fn handle_file_diagnostics_cli(file_path: &String, diagnostics: &Vec<Diagnostic>
     println!();
 
     // Create a github issue link
-    let mut url = Url::parse("https://github.com/voltrevo/ValueScript/issues/new").unwrap();
+    let mut url = Url::parse("https://github.com/voltrevo/summon/issues/new").unwrap();
 
     #[derive(serde::Serialize)]
     struct TitleAndBody {
@@ -100,7 +100,7 @@ fn handle_file_diagnostics_cli(file_path: &String, diagnostics: &Vec<Diagnostic>
 
     url.set_query(Some(&query_string));
 
-    println!("This is a bug in ValueScript, please consider reporting it:");
+    println!("This is a bug in summon, please consider reporting it:");
     println!();
     println!("{}", url);
     println!();
