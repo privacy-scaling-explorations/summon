@@ -15,4 +15,4 @@ serde = "1.0"
 serde_qs = "0.8.0"
 serde_json = "1.0"
 bristol-circuit = { git = "https://github.com/voltrevo/bristol-circuit", rev = "2394ccc" }
-boolify = { git = "https://github.com/voltrevo/boolify", rev = "e9707c0" }
+boolify = { git = "https://github.com/voltrevo/boolify", rev = "204bf68" }

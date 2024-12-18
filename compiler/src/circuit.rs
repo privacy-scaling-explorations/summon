@@ -144,7 +144,10 @@ impl Circuit {
         constants,
         output_name_to_wire_index,
       },
-      io_widths: None,
+      io_widths: (
+        vec![1usize; self.inputs.len()],
+        vec![1usize; self.outputs.len()],
+      ),
       gates: bristol_gates,
     }
   }
