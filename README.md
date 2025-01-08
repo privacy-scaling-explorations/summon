@@ -7,7 +7,7 @@ Based on [ValueScript](https://github.com/voltrevo/ValueScript).
 ## Setup
 
 ```sh
-cargo build
+cargo build # Note: Not a rust user? You might prefer the NodeJS version further down
 export PATH="$PATH:$PWD/target/debug"
 ```
 
@@ -20,6 +20,27 @@ summonc main.ts
 This will generate the circuit in [bristol format](https://nigelsmart.github.io/MPC-Circuits/) at `output/circuit.txt` and a description of the inputs, outputs, and constants at `output/circuit_info.json`.
 
 You can also produce boolean circuits by adding `--boolify-width 16`. (See [boolify](https://github.com/voltrevo/boolify) for more about boolean circuits.)
+
+### NodeJS
+
+Runs via WebAssembly so you don't need a rust environment on your system.
+
+See [`@mpc-cli/summon`](https://github.com/cedoor/mpc-cli/tree/main/packages/cli-summon).
+
+```sh
+npx @mpc-cli/summon main.ts
+```
+
+or
+
+```sh
+npm i -g @mpc-cli/summon
+summonc main.ts
+```
+
+Note: multi-file circuits and boolean circuits are not supported in the NodeJS CLI yet.
+
+There is also a NodeJS API: [`summon-ts`](https://github.com/voltrevo/summon-ts).
 
 ## Example
 
