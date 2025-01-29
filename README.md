@@ -38,8 +38,6 @@ npm i -g @mpc-cli/summon
 summonc main.ts
 ```
 
-Note: multi-file circuits and boolean circuits are not supported in the NodeJS CLI yet.
-
 There is also a NodeJS API: [`summon-ts`](https://github.com/voltrevo/summon-ts).
 
 ## Example
