@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{cell::RefCell, collections::BTreeMap, collections::HashMap, rc::Rc};
 
 use valuescript_compiler::{asm, assemble, Diagnostic, ResolvedPath};
 use valuescript_vm::vs_value::{ToDynamicVal, Val, VsType};
@@ -161,17 +161,17 @@ fn generate_circuit(
   output_ids: Vec<usize>,
   builder: CircuitBuilder,
 ) -> Circuit {
-  let mut inputs = HashMap::<String, usize>::new();
+  let mut inputs = BTreeMap::<String, usize>::new();
   for (i, reg) in fn_.parameters.iter().enumerate() {
     inputs.insert(reg.name.clone(), i);
   }
 
-  let mut constants = HashMap::<usize, usize>::new();
+  let mut constants = BTreeMap::<usize, usize>::new();
   for (value, wire_id) in &builder.constants {
     constants.insert(*wire_id, *value);
   }
 
-  let mut outputs = HashMap::<String, usize>::new();
+  let mut outputs = BTreeMap::<String, usize>::new();
   if output_ids.len() == 1 {
     outputs.insert(name, output_ids[0]);
   } else {

@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests_ {
-  use std::{collections::HashMap, fs, path::PathBuf};
+  use std::{collections::BTreeMap, fs, path::PathBuf};
 
   use crate::{compile, resolve_entry_path::resolve_entry_path, CompileOk};
 
@@ -28,7 +28,7 @@ mod tests_ {
         .inputs
         .iter()
         .map(|(name, i)| (name.clone(), input[*i]))
-        .collect::<HashMap<_, _>>();
+        .collect::<BTreeMap<_, _>>();
 
       let outputs = circuit.eval(&inputs);
 
@@ -39,7 +39,7 @@ mod tests_ {
         .iter()
         .enumerate()
         .map(|(i, (name, _))| ((*name).clone(), i))
-        .collect::<HashMap<_, _>>();
+        .collect::<BTreeMap<_, _>>();
 
       for (name, value) in &outputs {
         let wire_id = output_name_to_index[name];
