@@ -166,7 +166,7 @@ dependencies = [
 [[package]]
 name = "boolify"
 version = "0.1.0"
-source = "git+https://github.com/voltrevo/boolify?rev=8766836#8766836d93cdf427fae0b0b612b94443c20d5b28"
+source = "git+https://github.com/voltrevo/boolify?rev=eaabb17#eaabb17835460e2e7d89f5fdc8d2422106728744"
 dependencies = [
  "bristol-circuit",
  "serde",
@@ -176,7 +176,7 @@ dependencies = [
 [[package]]
 name = "bristol-circuit"
 version = "0.1.0"
-source = "git+https://github.com/voltrevo/bristol-circuit?rev=2394ccc#2394ccc53e69de5f59b62da5386096050e307649"
+source = "git+https://github.com/cedoor/bristol-circuit?rev=ff7587a#ff7587a4785baaa454498479839dd954424c13ea"
 dependencies = [
  "serde",
  "serde_json",
