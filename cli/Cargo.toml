@@ -14,5 +14,5 @@ url = "2.2.1"
 serde = "1.0"
 serde_qs = "0.8.0"
 serde_json = "1.0"
-bristol-circuit = { git = "https://github.com/voltrevo/bristol-circuit", rev = "2394ccc" }
-boolify = { git = "https://github.com/voltrevo/boolify", rev = "8766836" }
+bristol-circuit = { git = "https://github.com/cedoor/bristol-circuit", rev = "ff7587a" }
+boolify = { git = "https://github.com/voltrevo/boolify", rev = "eaabb17" }

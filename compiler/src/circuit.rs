@@ -1,4 +1,4 @@
-use std::{cmp::max, collections::HashMap};
+use std::{cmp::max, collections::BTreeMap};
 
 use bristol_circuit::{BristolCircuit, CircuitInfo, ConstantInfo, Gate as BristolGate};
 use valuescript_vm::{binary_op::BinaryOp, unary_op::UnaryOp};
@@ -8,9 +8,9 @@ use crate::bristol_op_strings::{to_bristol_binary_op, to_bristol_unary_op};
 #[derive(Default)]
 pub struct Circuit {
   pub size: usize,
-  pub inputs: HashMap<String, usize>,
-  pub constants: HashMap<usize, usize>, // wire_id -> value
-  pub outputs: HashMap<String, usize>,
+  pub inputs: BTreeMap<String, usize>,
+  pub constants: BTreeMap<usize, usize>, // wire_id -> value
+  pub outputs: BTreeMap<String, usize>,
   pub gates: Vec<Gate>,
 }
 
@@ -29,7 +29,7 @@ pub enum Gate {
 }
 
 impl Circuit {
-  pub fn eval<N: CircuitNumber>(&self, inputs: &HashMap<String, N>) -> HashMap<String, N> {
+  pub fn eval<N: CircuitNumber>(&self, inputs: &BTreeMap<String, N>) -> BTreeMap<String, N> {
     let mut wire_values = vec![N::zero(); self.size];
 
     for (name, wire_id) in &self.inputs {
@@ -55,7 +55,7 @@ impl Circuit {
       }
     }
 
-    let mut res = HashMap::<String, N>::new();
+    let mut res = BTreeMap::<String, N>::new();
 
     for (name, wire_id) in &self.outputs {
       res.insert(name.clone(), wire_values[*wire_id].clone());
@@ -111,13 +111,13 @@ impl Circuit {
       });
     }
 
-    let input_name_to_wire_index: HashMap<String, usize> = self
+    let input_name_to_wire_index: BTreeMap<String, usize> = self
       .inputs
       .iter()
       .map(|(name, id)| (name.clone(), *id))
       .collect();
 
-    let constants: HashMap<String, ConstantInfo> = self
+    let constants: BTreeMap<String, ConstantInfo> = self
       .constants
       .iter()
       .map(|(id, value)| {
@@ -131,7 +131,7 @@ impl Circuit {
       })
       .collect();
 
-    let output_name_to_wire_index: HashMap<String, usize> = self
+    let output_name_to_wire_index: BTreeMap<String, usize> = self
       .outputs
       .iter()
       .map(|(name, id)| (name.clone(), *id))
