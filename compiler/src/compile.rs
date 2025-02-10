@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::BTreeMap, collections::HashMap, rc::Rc};
 
-use valuescript_compiler::{asm, assemble, Diagnostic, ResolvedPath};
+use valuescript_compiler::{asm, assemble, Diagnostic, DiagnosticLevel, ResolvedPath};
 use valuescript_vm::vs_value::{ToDynamicVal, Val, VsType};
 
 use crate::{
@@ -67,10 +67,18 @@ where
     diagnostics,
   } = valuescript_compiler::compile(path, read_file);
 
-  let module = match module {
-    Some(module) => module,
-    None => return Err(CompileErr { diagnostics }),
-  };
+  if diagnostics.iter().any(|(_, path_diagnostics)| {
+    path_diagnostics.iter().any(|diag| {
+      matches!(
+        diag.level,
+        DiagnosticLevel::Error | DiagnosticLevel::InternalError
+      )
+    })
+  }) {
+    return Err(CompileErr { diagnostics });
+  }
+
+  let module = module.expect("Module cannot be None at this point");
 
   let (name, asm_fn) = get_asm_main(&module);
 
