@@ -21,6 +21,7 @@ pub struct CompileOk {
 
 #[derive(Debug)]
 pub struct CompileErr {
+  pub circuit: Option<Circuit>,
   pub diagnostics: HashMap<ResolvedPath, Vec<Diagnostic>>,
 }
 
@@ -41,6 +42,17 @@ where
 
   let (output_ids, builder) = build(input_len, outputs);
   let circuit = generate_circuit(name, main_asm, output_ids, builder);
+
+  if diagnostics.iter().any(|(_, path_diagnostics)| {
+    path_diagnostics.iter().any(|diagnostic| {
+      matches!(
+        diagnostic.level,
+        DiagnosticLevel::Error | DiagnosticLevel::InternalError
+      )
+    })
+  }) {
+    return Err(CompileErr { circuit: Some(circuit), diagnostics });
+  }
 
   Ok(CompileOk {
     circuit,
@@ -67,18 +79,10 @@ where
     diagnostics,
   } = valuescript_compiler::compile(path, read_file);
 
-  if diagnostics.iter().any(|(_, path_diagnostics)| {
-    path_diagnostics.iter().any(|diag| {
-      matches!(
-        diag.level,
-        DiagnosticLevel::Error | DiagnosticLevel::InternalError
-      )
-    })
-  }) {
-    return Err(CompileErr { diagnostics });
-  }
-
-  let module = module.expect("Module cannot be None at this point");
+  let module = match module {
+    Some(module) => module,
+    None => return Err(CompileErr { circuit: None, diagnostics }),
+  };
 
   let (name, asm_fn) = get_asm_main(&module);
 

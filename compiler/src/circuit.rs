@@ -6,6 +6,7 @@ use valuescript_vm::{binary_op::BinaryOp, unary_op::UnaryOp};
 use crate::bristol_op_strings::{to_bristol_binary_op, to_bristol_unary_op};
 
 #[derive(Default)]
+#[derive(Debug)]
 pub struct Circuit {
   pub size: usize,
   pub inputs: BTreeMap<String, usize>,
@@ -14,6 +15,7 @@ pub struct Circuit {
   pub gates: Vec<Gate>,
 }
 
+#[derive(Debug)]
 pub enum Gate {
   Unary {
     op: UnaryOp,
