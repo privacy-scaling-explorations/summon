@@ -6,11 +6,18 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-valuescript_compiler = { git = "https://github.com/voltrevo/ValueScript", rev = "ae82029" }
-valuescript_vm = { git = "https://github.com/voltrevo/ValueScript", rev = "ae82029" }
-valuescript_common = { git = "https://github.com/voltrevo/ValueScript", rev = "ae82029" }
+valuescript_compiler = { path = "../../value-script/valuescript_compiler" }
+valuescript_vm = { path = "../../value-script/valuescript_vm" }
+valuescript_common = { path = "../../value-script/valuescript_common" }
 num-bigint = "0.4"
 num-traits = "0.2"
+queues = "1.0.2"
 serde = "1.0"
 serde_json = "1.0"
+swc_common = { version = "0.17.22", features=["tty-emitter"] }
+swc_ecma_parser = "0.102.2"
+swc = "0.168.3"
+swc_atoms = "0.2"
+swc_ecma_ast = "0.76.0"
 bristol-circuit = { git = "https://github.com/voltrevo/bristol-circuit", rev = "288847c" }
+tiny-keccak = { version = "2.0", features = ["keccak"] }

@@ -1,17 +1,22 @@
 use std::{cell::RefCell, collections::BTreeMap, collections::HashMap, rc::Rc};
 
-use valuescript_compiler::{asm, assemble, Diagnostic, DiagnosticLevel, ResolvedPath};
 use valuescript_vm::vs_value::{ToDynamicVal, Val, VsType};
 
 use crate::{
+  asm,
+  assembler::assemble,
   bytecode::{Bytecode, DecoderMaker},
   circuit::Circuit,
   circuit_builder::CircuitBuilder,
   circuit_signal::{CircuitSignal, CircuitSignalData},
   circuit_vm::CircuitVM,
   cs_function::CsFunction,
+  diagnostic::DiagnosticLevel,
+  gather_modules,
   id_generator::IdGenerator,
+  link_module,
   val_dynamic_downcast::val_dynamic_downcast,
+  Diagnostic, ResolvedPath,
 };
 
 pub struct CompileOk {
@@ -51,7 +56,10 @@ where
       )
     })
   }) {
-    return Err(CompileErr { circuit: Some(circuit), diagnostics });
+    return Err(CompileErr {
+      circuit: Some(circuit),
+      diagnostics,
+    });
   }
 
   Ok(CompileOk {
@@ -74,14 +82,25 @@ fn get_compile_artifacts<ReadFile>(
 where
   ReadFile: Fn(&str) -> Result<String, String>,
 {
-  let valuescript_compiler::CompileResult {
-    module,
-    diagnostics,
-  } = valuescript_compiler::compile(path, read_file);
+  let gm = gather_modules(path.clone(), read_file);
+  let mut link_module_result = link_module(&gm.entry_point, &gm.modules);
+
+  let module = link_module_result.module;
+  let mut diagnostics = gm.diagnostics;
+
+  diagnostics
+    .entry(path)
+    .or_default()
+    .append(&mut link_module_result.diagnostics);
 
   let module = match module {
     Some(module) => module,
-    None => return Err(CompileErr { circuit: None, diagnostics }),
+    None => {
+      return Err(CompileErr {
+        circuit: None,
+        diagnostics,
+      })
+    }
   };
 
   let (name, asm_fn) = get_asm_main(&module);
