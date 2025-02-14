@@ -6,7 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-valuescript_compiler = { path = "../../value-script/valuescript_compiler" }
 valuescript_vm = { path = "../../value-script/valuescript_vm" }
 valuescript_common = { path = "../../value-script/valuescript_common" }
 num-bigint = "0.4"
