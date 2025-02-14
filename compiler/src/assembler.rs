@@ -5,7 +5,7 @@ use std::{
 
 use num_bigint::{BigInt, Sign};
 
-use valuescript_common::BuiltinName;
+use summon_common::BuiltinName;
 
 use crate::asm::{
   Array, Builtin, Class, ContentHashable, Definition, DefinitionContent, FnLine, Function, Hash,

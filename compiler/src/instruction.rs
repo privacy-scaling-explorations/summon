@@ -1,4 +1,4 @@
-use valuescript_common::InstructionByte;
+use summon_common::InstructionByte;
 
 use crate::asm::{LabelRef, Register, StructuredFormattable, StructuredFormatter, Value};
 

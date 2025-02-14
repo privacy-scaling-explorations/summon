@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 use num_bigint::BigInt;
-use valuescript_common::{InstructionByte, BUILTIN_NAMES};
+use summon_common::{InstructionByte, BUILTIN_NAMES};
 
 use crate::asm::{
   Array, Builtin, Class, ContentHashable, Definition, DefinitionContent, ExportStar, FnLine,

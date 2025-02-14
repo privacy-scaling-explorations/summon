@@ -1,6 +1,6 @@
 use std::mem::take;
 
-use valuescript_common::InstructionByte;
+use summon_common::InstructionByte;
 use valuescript_vm::cat_stack_frame::CatStackFrame;
 use valuescript_vm::internal_error_builtin::ToInternalError;
 use valuescript_vm::jsx_element::JsxElement;

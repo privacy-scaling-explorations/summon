@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 valuescript_vm = { path = "../../value-script/valuescript_vm" }
-valuescript_common = { path = "../../value-script/valuescript_common" }
+summon_common = { path = "../common" }
 num-bigint = "0.4"
 num-traits = "0.2"
 queues = "1.0.2"

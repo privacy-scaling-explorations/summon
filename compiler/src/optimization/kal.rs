@@ -1,5 +1,5 @@
 use num_bigint::BigInt;
-use valuescript_common::unicode_at;
+use summon_common::unicode_at;
 use valuescript_vm::{
   operations,
   vs_class::VsClass,

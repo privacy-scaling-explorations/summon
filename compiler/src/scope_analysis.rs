@@ -5,7 +5,7 @@ use std::{
 };
 
 use swc_common::Spanned;
-use valuescript_common::BUILTIN_NAMES;
+use summon_common::BUILTIN_NAMES;
 
 use crate::{
   asm::{Builtin, Register, Value},

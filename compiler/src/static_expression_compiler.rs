@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 
 use swc_common::Spanned;
-use valuescript_common::to_i32;
+use summon_common::to_i32;
 
 use crate::{
   asm::{Array, Builtin, Number, Object, Value},

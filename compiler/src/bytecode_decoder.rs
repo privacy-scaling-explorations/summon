@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use num_bigint::BigInt;
 use num_bigint::Sign;
-use valuescript_common::InstructionByte;
+use summon_common::InstructionByte;
 use valuescript_vm::vs_class::VsClass;
 use valuescript_vm::vs_object::VsObject;
 use valuescript_vm::vs_value::ToDynamicVal;

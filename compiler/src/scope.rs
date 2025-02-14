@@ -2,7 +2,7 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use swc_common::Spanned;
 
-use valuescript_common::BUILTIN_NAMES;
+use summon_common::BUILTIN_NAMES;
 
 use crate::diagnostic::Diagnostic;
 use crate::{asm::Builtin, constants::CONSTANTS};
