@@ -1,6 +1,6 @@
 use std::any::Any;
 
-use valuescript_vm::vs_value::Val;
+use summon_vm::vs_value::Val;
 
 pub fn val_dynamic_downcast<T: Any>(val: &Val) -> Option<&T> {
   match val {

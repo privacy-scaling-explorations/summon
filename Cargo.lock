@@ -1510,13 +1510,25 @@ dependencies = [
  "serde",
  "serde_json",
  "summon_common",
+ "summon_vm",
  "swc",
  "swc_atoms",
  "swc_common",
  "swc_ecma_ast",
  "swc_ecma_parser",
  "tiny-keccak",
- "valuescript_vm",
+]
+
+[[package]]
+name = "summon_vm"
+version = "0.1.0"
+dependencies = [
+ "num-bigint",
+ "num-derive",
+ "num-traits",
+ "serde_json",
+ "storage",
+ "summon_common",
 ]
 
 [[package]]
@@ -2372,26 +2384,6 @@ dependencies = [
  "idna",
  "matches",
  "percent-encoding",
-]
-
-[[package]]
-name = "valuescript_common"
-version = "0.1.0"
-dependencies = [
- "strum",
- "strum_macros",
-]
-
-[[package]]
-name = "valuescript_vm"
-version = "0.1.0"
-dependencies = [
- "num-bigint",
- "num-derive",
- "num-traits",
- "serde_json",
- "storage",
- "valuescript_common",
 ]
 
 [[package]]

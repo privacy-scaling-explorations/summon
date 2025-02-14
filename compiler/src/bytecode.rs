@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::HashMap, fmt, ops::Index, rc::Rc, slice::SliceIndex};
 
-use valuescript_vm::vs_value::Val;
+use summon_vm::vs_value::Val;
 
 use crate::bytecode_decoder::BytecodeDecoder;
 

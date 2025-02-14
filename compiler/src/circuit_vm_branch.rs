@@ -2,10 +2,10 @@ use std::cmp::Ordering;
 use std::mem::take;
 use std::rc::Rc;
 
-use valuescript_vm::internal_error_builtin::ToInternalError;
-use valuescript_vm::operations::op_and;
-use valuescript_vm::vs_value::{ToVal, Val};
-use valuescript_vm::{FirstStackFrame, FrameStepOk, StackFrame};
+use summon_vm::internal_error_builtin::ToInternalError;
+use summon_vm::operations::op_and;
+use summon_vm::vs_value::{ToVal, Val};
+use summon_vm::{FirstStackFrame, FrameStepOk, StackFrame};
 
 use crate::bytecode_decoder::BytecodeType;
 use crate::bytecode_stack_frame::BytecodeStackFrame;

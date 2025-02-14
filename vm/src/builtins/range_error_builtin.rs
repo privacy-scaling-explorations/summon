@@ -1,0 +1,120 @@
+use std::fmt;
+use std::{collections::BTreeMap, rc::Rc};
+
+use crate::native_function::{native_fn, ThisWrapper};
+use crate::vs_value::ToVal;
+use crate::ValTrait;
+use crate::{
+  native_function::NativeFunction,
+  operations::op_submov,
+  vs_class::VsClass,
+  vs_object::VsObject,
+  vs_value::{LoadFunctionResult, Val},
+};
+
+use super::builtin_object::BuiltinObject;
+
+pub struct RangeErrorBuiltin {}
+
+impl BuiltinObject for RangeErrorBuiltin {
+  fn bo_name() -> &'static str {
+    "RangeError"
+  }
+
+  fn bo_sub(_key: &str) -> Val {
+    Val::Undefined
+  }
+
+  fn bo_load_function() -> LoadFunctionResult {
+    LoadFunctionResult::NativeFunction(to_range_error)
+  }
+
+  fn bo_as_class_data() -> Option<Rc<VsClass>> {
+    Some(Rc::new(VsClass {
+      name: "RangeError".to_string(),
+      content_hash: None,
+      constructor: Val::Static(&SET_MESSAGE),
+      prototype: make_range_error_prototype(),
+      static_: VsObject::default().to_val(),
+    }))
+  }
+}
+
+impl fmt::Display for RangeErrorBuiltin {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "function RangeError() {{ [native code] }}")
+  }
+}
+
+// TODO: Static? (Rc -> Arc?)
+fn make_range_error_prototype() -> Val {
+  VsObject {
+    string_map: BTreeMap::from([
+      ("name".to_string(), "RangeError".to_val()),
+      ("toString".to_string(), Val::Static(&RANGE_ERROR_TO_STRING)),
+    ]),
+    symbol_map: Default::default(),
+    prototype: Val::Void,
+  }
+  .to_val()
+}
+
+static SET_MESSAGE: NativeFunction = native_fn(|mut this, params| {
+  let message = match params.first() {
+    Some(param) => param.to_string(),
+    None => "".to_string(),
+  };
+
+  op_submov(this.get_mut()?, &"message".to_val(), message.to_val())?;
+
+  Ok(Val::Undefined)
+});
+
+pub fn to_range_error(_: ThisWrapper, params: Vec<Val>) -> Result<Val, Val> {
+  Ok(
+    VsObject {
+      string_map: BTreeMap::from([(
+        "message".to_string(),
+        match params.first() {
+          Some(param) => param.clone().to_val_string(),
+          None => "".to_val(),
+        },
+      )]),
+      symbol_map: Default::default(),
+      prototype: make_range_error_prototype(),
+    }
+    .to_val(),
+  )
+}
+
+static RANGE_ERROR_TO_STRING: NativeFunction = native_fn(|this, _params| {
+  let message = this.get().sub(&"message".to_val())?;
+  Ok(format!("RangeError({})", message).to_val())
+});
+
+pub trait ToRangeError {
+  fn to_range_error(self) -> Val;
+}
+
+impl ToRangeError for &str {
+  fn to_range_error(self) -> Val {
+    self.to_string().to_range_error()
+  }
+}
+
+impl ToRangeError for String {
+  fn to_range_error(self) -> Val {
+    self.to_val().to_range_error()
+  }
+}
+
+impl ToRangeError for Val {
+  fn to_range_error(self) -> Val {
+    VsObject {
+      string_map: BTreeMap::from([("message".to_string(), self)]),
+      symbol_map: Default::default(),
+      prototype: make_range_error_prototype(),
+    }
+    .to_val()
+  }
+}

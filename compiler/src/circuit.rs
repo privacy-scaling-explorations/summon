@@ -1,7 +1,7 @@
 use std::{cmp::max, collections::BTreeMap};
 
 use bristol_circuit::{BristolCircuit, CircuitInfo, ConstantInfo, Gate as BristolGate};
-use valuescript_vm::{binary_op::BinaryOp, unary_op::UnaryOp};
+use summon_vm::{binary_op::BinaryOp, unary_op::UnaryOp};
 
 use crate::bristol_op_strings::{to_bristol_binary_op, to_bristol_unary_op};
 

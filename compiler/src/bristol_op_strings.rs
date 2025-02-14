@@ -1,4 +1,4 @@
-use valuescript_vm::{binary_op::BinaryOp, unary_op::UnaryOp};
+use summon_vm::{binary_op::BinaryOp, unary_op::UnaryOp};
 
 pub fn to_bristol_unary_op(unary_op: UnaryOp) -> String {
   match unary_op {

@@ -1,6 +1,6 @@
 use std::{cell::RefCell, collections::BTreeMap, collections::HashMap, rc::Rc};
 
-use valuescript_vm::vs_value::{ToDynamicVal, Val, VsType};
+use summon_vm::vs_value::{ToDynamicVal, Val, VsType};
 
 use crate::{
   asm,

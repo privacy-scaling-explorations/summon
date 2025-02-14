@@ -1,7 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 use num_bigint::BigInt;
-use valuescript_vm::{
+use summon_vm::{
   binary_op::BinaryOp,
   operations::op_or,
   type_error_builtin::ToTypeError,
@@ -11,7 +11,7 @@ use valuescript_vm::{
 };
 
 use crate::{id_generator::IdGenerator, val_dynamic_downcast::val_dynamic_downcast};
-use valuescript_vm::vs_value::VsType;
+use summon_vm::vs_value::VsType;
 
 #[derive(Clone)]
 pub enum CircuitSignalData {
@@ -76,11 +76,11 @@ impl ValTrait for CircuitSignal {
     None
   }
 
-  fn as_array_data(&self) -> Option<Rc<valuescript_vm::vs_array::VsArray>> {
+  fn as_array_data(&self) -> Option<Rc<summon_vm::vs_array::VsArray>> {
     None
   }
 
-  fn as_class_data(&self) -> Option<Rc<valuescript_vm::vs_class::VsClass>> {
+  fn as_class_data(&self) -> Option<Rc<summon_vm::vs_class::VsClass>> {
     None
   }
 

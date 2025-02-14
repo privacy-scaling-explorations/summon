@@ -1,4 +1,4 @@
-use valuescript_vm::{
+use summon_vm::{
   vs_value::{Val, VsType},
   ValTrait, VsSymbol,
 };

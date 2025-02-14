@@ -5,7 +5,7 @@ use std::{
 };
 
 use num_bigint::BigInt;
-use valuescript_vm::{
+use summon_vm::{
   internal_error_builtin::ToInternalError,
   native_frame_function::NativeFrameFunction,
   native_function::ThisWrapper,

@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use valuescript_vm::{
+use summon_vm::{
   vs_class::VsClass,
   vs_object::VsObject,
   vs_value::{ToVal, Val},

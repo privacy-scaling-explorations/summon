@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use num_traits::ToPrimitive;
-use valuescript_vm::{vs_value::Val, ValTrait};
+use summon_vm::{vs_value::Val, ValTrait};
 
 use crate::{
   circuit::Gate,

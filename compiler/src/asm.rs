@@ -6,7 +6,7 @@ use std::{
 };
 
 use num_bigint::BigInt;
-use valuescript_vm::{vs_value::Val, Bytecode, DecoderMaker};
+use summon_vm::{vs_value::Val, Bytecode, DecoderMaker};
 
 use crate::{
   assemble, assembler::ValueType, expression_compiler::CompiledExpression,

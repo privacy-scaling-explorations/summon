@@ -7,7 +7,7 @@ use crate::{
   make_generator_frame::MakeGeneratorFrame,
 };
 
-use valuescript_vm::{
+use summon_vm::{
   internal_error_builtin::ToInternalError,
   type_error_builtin::ToTypeError,
   vs_array::VsArray,

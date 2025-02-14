@@ -1,6 +1,6 @@
 use std::{cmp::Ordering, collections::BinaryHeap, mem::take, rc::Rc};
 
-use valuescript_vm::{
+use summon_vm::{
   internal_error_builtin::ToInternalError,
   operations::op_or,
   vs_value::{ToVal, Val},

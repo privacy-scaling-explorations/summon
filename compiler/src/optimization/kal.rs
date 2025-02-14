@@ -1,6 +1,6 @@
 use num_bigint::BigInt;
 use summon_common::unicode_at;
-use valuescript_vm::{
+use summon_vm::{
   operations,
   vs_class::VsClass,
   vs_object::VsObject,

@@ -1,6 +1,6 @@
 use std::mem::take;
 
-use valuescript_vm::{
+use summon_vm::{
   vs_value::{ToDynamicVal, Val},
   CallResult, FrameStepOk, FrameStepResult, StackFrame, StackFrameTrait,
 };

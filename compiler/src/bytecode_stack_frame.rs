@@ -1,18 +1,18 @@
 use std::mem::take;
 
 use summon_common::InstructionByte;
-use valuescript_vm::cat_stack_frame::CatStackFrame;
-use valuescript_vm::internal_error_builtin::ToInternalError;
-use valuescript_vm::jsx_element::JsxElement;
-use valuescript_vm::native_function::ThisWrapper;
-use valuescript_vm::operations::{op_delete, op_not};
-use valuescript_vm::type_error_builtin::ToTypeError;
-use valuescript_vm::vs_object::VsObject;
-use valuescript_vm::vs_value::{ToDynamicVal, ToVal, VsType};
-use valuescript_vm::{
+use summon_vm::cat_stack_frame::CatStackFrame;
+use summon_vm::internal_error_builtin::ToInternalError;
+use summon_vm::jsx_element::JsxElement;
+use summon_vm::native_function::ThisWrapper;
+use summon_vm::operations::{op_delete, op_not};
+use summon_vm::type_error_builtin::ToTypeError;
+use summon_vm::vs_object::VsObject;
+use summon_vm::vs_value::{ToDynamicVal, ToVal, VsType};
+use summon_vm::{
   operations, CallResult, FrameStepOk, FrameStepResult, LoadFunctionResult, StackFrame, ValTrait,
 };
-use valuescript_vm::{vs_value::Val, StackFrameTrait};
+use summon_vm::{vs_value::Val, StackFrameTrait};
 
 use crate::bytecode_decoder::{BytecodeDecoder, BytecodeType};
 use crate::circuit_signal::CircuitSignal;

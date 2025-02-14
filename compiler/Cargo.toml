@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-valuescript_vm = { path = "../../value-script/valuescript_vm" }
+summon_vm = { path = "../vm" }
 summon_common = { path = "../common" }
 num-bigint = "0.4"
 num-traits = "0.2"
