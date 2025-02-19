@@ -1,4 +1,4 @@
-use valuescript_compiler::{resolve_path, ResolvedPath};
+use crate::{resolve_path::resolve_path, resolve_path::ResolvedPath};
 
 pub fn resolve_entry_path(entry_path: &str) -> ResolvedPath {
   // Like cwd (current working dir), but it's cwd/file.

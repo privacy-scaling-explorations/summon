@@ -3,7 +3,7 @@ use std::{collections::HashMap, path::PathBuf};
 use serde_qs as qs;
 use url::Url;
 
-use valuescript_compiler::{Diagnostic, DiagnosticLevel, ResolvedPath};
+use summon_compiler::{Diagnostic, DiagnosticLevel, ResolvedPath};
 
 pub fn handle_diagnostics_cli(diagnostics: &HashMap<ResolvedPath, Vec<Diagnostic>>) {
   for (file_path, file_diagnostics) in diagnostics {
