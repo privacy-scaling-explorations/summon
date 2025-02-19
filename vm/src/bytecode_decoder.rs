@@ -2,18 +2,19 @@ use std::collections::BTreeMap;
 use std::mem::take;
 use std::rc::Rc;
 
+use crate::vs_class::VsClass;
+use crate::vs_object::VsObject;
+use crate::vs_value::ToDynamicVal;
+use crate::vs_value::ToVal;
+use crate::vs_value::Val;
+use crate::VsSymbol;
+use crate::BUILTIN_VALS;
 use num_bigint::BigInt;
 use num_bigint::Sign;
 use summon_common::InstructionByte;
 
-use crate::builtins::BUILTIN_VALS;
 use crate::bytecode::Bytecode;
-use crate::vs_class::VsClass;
-use crate::vs_function::VsFunction;
-use crate::vs_object::VsObject;
-use crate::vs_symbol::VsSymbol;
-use crate::vs_value::ToVal;
-use crate::vs_value::Val;
+use crate::cs_function::CsFunction;
 
 #[derive(Clone)]
 pub struct BytecodeDecoder {
@@ -303,7 +304,7 @@ impl BytecodeDecoder {
     let register_count = self.decode_byte() as usize;
     let parameter_count = self.decode_byte() as usize;
 
-    VsFunction {
+    CsFunction {
       bytecode: self.bytecode.clone(),
       meta_pos,
       is_generator,
@@ -312,7 +313,7 @@ impl BytecodeDecoder {
       start: self.pos,
       binds: Vec::new(),
     }
-    .to_val()
+    .to_dynamic_val()
   }
 
   pub fn decode_instruction(&mut self) -> InstructionByte {

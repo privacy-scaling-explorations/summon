@@ -76,6 +76,7 @@ impl VsFunction {
       this_target: None,
       return_target: None,
       catch_setting: None,
+      fork_info: None,
     }
   }
 

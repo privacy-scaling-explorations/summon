@@ -2,15 +2,12 @@ use std::{
   collections::HashMap,
   fmt::Write,
   hash::{Hash as HashTrait, Hasher},
-  rc::Rc,
 };
 
 use num_bigint::BigInt;
-use summon_vm::{vs_value::Val, Bytecode, DecoderMaker};
 
 use crate::{
-  assemble, assembler::ValueType, expression_compiler::CompiledExpression,
-  instruction::RegisterVisitMut, parse_module,
+  assembler::ValueType, expression_compiler::CompiledExpression, instruction::RegisterVisitMut
 };
 
 pub use crate::instruction::{Instruction, InstructionFieldMut};
@@ -864,10 +861,4 @@ impl Object {
 
     result
   }
-}
-
-pub fn inline(source: &str) -> Val {
-  let bytecode = Rc::new(Bytecode::new(assemble(&parse_module(source))));
-
-  bytecode.decoder(0).decode_val(&mut vec![])
 }

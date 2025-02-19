@@ -2,21 +2,20 @@ use std::{cell::RefCell, collections::BTreeMap, collections::HashMap, rc::Rc};
 
 use summon_vm::vs_value::{ToDynamicVal, Val, VsType};
 
-use crate::{
-  asm,
-  assembler::assemble,
-  bytecode::{Bytecode, DecoderMaker},
+use summon_vm::{
   circuit::Circuit,
   circuit_builder::CircuitBuilder,
   circuit_signal::{CircuitSignal, CircuitSignalData},
   circuit_vm::CircuitVM,
   cs_function::CsFunction,
-  diagnostic::DiagnosticLevel,
-  gather_modules,
   id_generator::IdGenerator,
-  link_module,
   val_dynamic_downcast::val_dynamic_downcast,
-  Diagnostic, ResolvedPath,
+  Bytecode, DecoderMaker,
+};
+
+use crate::{
+  asm, assembler::assemble, diagnostic::DiagnosticLevel, gather_modules, link_module, Diagnostic,
+  ResolvedPath,
 };
 
 pub struct CompileOk {

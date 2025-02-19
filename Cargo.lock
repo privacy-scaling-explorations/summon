@@ -1523,6 +1523,7 @@ dependencies = [
 name = "summon_vm"
 version = "0.1.0"
 dependencies = [
+ "bristol-circuit",
  "num-bigint",
  "num-derive",
  "num-traits",

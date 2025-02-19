@@ -1,23 +1,20 @@
 use std::{
-  any::Any,
   fmt,
   mem::{swap, take},
   rc::Rc,
 };
 
 use num_bigint::BigInt;
-
 use crate::{
-  builtins::{internal_error_builtin::ToInternalError, type_error_builtin::ToTypeError},
-  iteration::{iteration_result::IterationResult, return_this::RETURN_THIS},
+  internal_error_builtin::ToInternalError,
   native_frame_function::NativeFrameFunction,
   native_function::ThisWrapper,
-  stack_frame::{CallResult, FrameStepOk, FrameStepResult, StackFrame, StackFrameTrait},
+  type_error_builtin::ToTypeError,
   vs_array::VsArray,
   vs_class::VsClass,
-  vs_symbol::VsSymbol,
   vs_value::{dynamic_make_mut, ToDynamicVal, ToVal, Val, VsType},
-  LoadFunctionResult, ValTrait,
+  CallResult, FrameStepOk, FrameStepResult, IterationResult, LoadFunctionResult, StackFrame,
+  StackFrameTrait, ValTrait, VsSymbol, RETURN_THIS,
 };
 
 #[derive(Clone, Default)]
@@ -243,11 +240,11 @@ impl StackFrameTrait for GeneratorFrame {
     Box::new(self.clone())
   }
 
-  fn as_any(&self) -> &dyn Any {
+  fn as_any(&self) -> &dyn std::any::Any {
     self
   }
 
-  fn as_any_mut(&mut self) -> &mut dyn Any {
+  fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
     self
   }
 }
@@ -366,11 +363,11 @@ impl StackFrameTrait for YieldStarFrame {
     Box::new(self.clone())
   }
 
-  fn as_any(&self) -> &dyn Any {
+  fn as_any(&self) -> &dyn std::any::Any {
     self
   }
 
-  fn as_any_mut(&mut self) -> &mut dyn Any {
+  fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
     self
   }
 }

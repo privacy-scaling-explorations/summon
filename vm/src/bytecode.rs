@@ -2,7 +2,8 @@ use std::{cell::RefCell, collections::HashMap, fmt, ops::Index, rc::Rc, slice::S
 
 use storage::{GenericError, StorageBackend, StorageEntity, StorageReader, StorageTxMut};
 
-use crate::{bytecode_decoder::BytecodeDecoder, vs_value::Val};
+use crate::vs_value::Val;
+use crate::bytecode_decoder::BytecodeDecoder;
 
 pub struct Bytecode {
   pub code: Vec<u8>,

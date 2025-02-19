@@ -1,13 +1,10 @@
 use std::{cmp::Ordering, collections::BinaryHeap, mem::take, rc::Rc};
 
-use summon_vm::{
+use crate::{
   internal_error_builtin::ToInternalError,
   operations::op_or,
   vs_value::{ToVal, Val},
   CallResult, FirstStackFrame, LoadFunctionResult, StackFrameTrait, ValTrait,
-};
-
-use crate::{
   arithmetic_merge::arithmetic_merge, bytecode_stack_frame::BytecodeStackFrame,
   circuit_vm_branch::CircuitVMBranch,
 };

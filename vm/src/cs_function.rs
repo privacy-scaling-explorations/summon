@@ -5,9 +5,6 @@ use crate::{
   bytecode_decoder::BytecodeDecoder,
   bytecode_stack_frame::BytecodeStackFrame,
   make_generator_frame::MakeGeneratorFrame,
-};
-
-use summon_vm::{
   internal_error_builtin::ToInternalError,
   type_error_builtin::ToTypeError,
   vs_array::VsArray,

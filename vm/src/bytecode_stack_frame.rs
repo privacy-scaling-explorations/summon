@@ -1,24 +1,29 @@
-use std::any::Any;
 use std::mem::take;
 
 use summon_common::InstructionByte;
-
-use crate::builtins::internal_error_builtin::ToInternalError;
-use crate::builtins::type_error_builtin::ToTypeError;
-use crate::bytecode_decoder::BytecodeDecoder;
-use crate::bytecode_decoder::BytecodeType;
 use crate::cat_stack_frame::CatStackFrame;
+use crate::internal_error_builtin::ToInternalError;
 use crate::jsx_element::JsxElement;
 use crate::native_function::ThisWrapper;
-use crate::operations;
-use crate::operations::op_delete;
-use crate::stack_frame::FrameStepOk;
-use crate::stack_frame::FrameStepResult;
-use crate::stack_frame::{CallResult, StackFrame, StackFrameTrait};
+use crate::operations::{op_delete, op_not};
+use crate::type_error_builtin::ToTypeError;
 use crate::vs_object::VsObject;
-use crate::vs_value::ToDynamicVal;
-use crate::vs_value::ToVal;
-use crate::vs_value::{LoadFunctionResult, Val, ValTrait};
+use crate::vs_value::{ToDynamicVal, ToVal, VsType};
+use crate::{
+  operations, CallResult, FrameStepOk, FrameStepResult, LoadFunctionResult, StackFrame, ValTrait,
+};
+use crate::{vs_value::Val, StackFrameTrait};
+
+use crate::bytecode_decoder::{BytecodeDecoder, BytecodeType};
+use crate::circuit_signal::CircuitSignal;
+use crate::val_dynamic_downcast::val_dynamic_downcast;
+
+#[derive(Clone)]
+pub struct ForkInfo {
+  pub flag: Val,
+  pub alt_flag: Val,
+  pub alt_frame: BytecodeStackFrame,
+}
 
 #[derive(Clone)]
 pub struct BytecodeStackFrame {
@@ -30,9 +35,10 @@ pub struct BytecodeStackFrame {
   pub this_target: Option<usize>,
   pub return_target: Option<usize>,
   pub catch_setting: Option<CatchSetting>,
+  pub fork_info: Option<Box<ForkInfo>>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct CatchSetting {
   pub pos: usize,
   pub register: Option<usize>,
@@ -114,6 +120,69 @@ impl BytecodeStackFrame {
       Val::Array(array_data) => array_data.elements.clone(),
       _ => panic!("Unexpected non-array params"),
     }
+  }
+
+  pub fn can_merge(&self, other: &BytecodeStackFrame) -> bool {
+    if !std::ptr::eq(
+      self.decoder.bytecode.as_ref(),
+      other.decoder.bytecode.as_ref(),
+    ) {
+      return false;
+    }
+
+    let BytecodeStackFrame {
+      decoder,
+      registers,
+      const_this,
+      param_start,
+      param_end,
+      this_target,
+      return_target,
+      catch_setting,
+      fork_info: _,
+    } = self;
+
+    let self_fields = (
+      match decoder.peek_type() {
+        BytecodeType::End => usize::MAX,
+        _ => decoder.pos,
+      },
+      registers.len(),
+      const_this,
+      param_start,
+      param_end,
+      this_target,
+      return_target,
+      catch_setting,
+    );
+
+    let BytecodeStackFrame {
+      decoder,
+      registers,
+      const_this,
+      param_start,
+      param_end,
+      this_target,
+      return_target,
+      catch_setting,
+      fork_info: _,
+    } = other;
+
+    let other_fields = (
+      match decoder.peek_type() {
+        BytecodeType::End => usize::MAX,
+        _ => decoder.pos,
+      },
+      registers.len(),
+      const_this,
+      param_start,
+      param_end,
+      this_target,
+      return_target,
+      catch_setting,
+    );
+
+    self_fields == other_fields
   }
 }
 
@@ -400,18 +469,60 @@ impl StackFrameTrait for BytecodeStackFrame {
         self.decoder.pos = dst;
       }
 
-      JmpIf => {
+      JmpIf => 'b: {
         let cond = self.decoder.decode_val(&mut self.registers);
         let dst = self.decoder.decode_pos();
+
+        if let Some(cond_signal) = val_dynamic_downcast::<CircuitSignal>(&cond) {
+          let mut alt_frame = self.clone();
+          alt_frame.decoder.pos = dst;
+
+          let flag = op_not(&cond).unwrap();
+
+          let alt_flag = match cond_signal.type_ {
+            VsType::Bool => cond,
+            VsType::Number => op_not(&flag).unwrap(),
+            _ => panic!("Unexpected signal type {}", cond_signal.type_),
+          };
+
+          self.fork_info = Some(Box::new(ForkInfo {
+            flag,
+            alt_flag,
+            alt_frame,
+          }));
+
+          break 'b;
+        }
 
         if cond.is_truthy() {
           self.decoder.pos = dst;
         }
       }
 
-      JmpIfNot => {
+      JmpIfNot => 'b: {
         let cond = self.decoder.decode_val(&mut self.registers);
         let dst = self.decoder.decode_pos();
+
+        if let Some(cond_signal) = val_dynamic_downcast::<CircuitSignal>(&cond) {
+          let mut alt_frame = self.clone();
+          alt_frame.decoder.pos = dst;
+
+          let alt_flag = op_not(&cond).unwrap();
+
+          let flag = match cond_signal.type_ {
+            VsType::Bool => cond,
+            VsType::Number => op_not(&alt_flag).unwrap(),
+            _ => panic!("Unexpected signal type {}", cond_signal.type_),
+          };
+
+          self.fork_info = Some(Box::new(ForkInfo {
+            flag,
+            alt_flag,
+            alt_frame,
+          }));
+
+          break 'b;
+        }
 
         if !cond.is_truthy() {
           self.decoder.pos = dst;
@@ -695,6 +806,7 @@ impl StackFrameTrait for BytecodeStackFrame {
       None => {}
       Some(tt) => {
         self.registers[tt] = call_result.this;
+        self.this_target = None;
       }
     };
 
@@ -702,6 +814,7 @@ impl StackFrameTrait for BytecodeStackFrame {
       None => {}
       Some(rt) => {
         self.registers[rt] = call_result.return_;
+        self.return_target = None;
       }
     };
   }
@@ -734,11 +847,11 @@ impl StackFrameTrait for BytecodeStackFrame {
     Box::new(self.clone())
   }
 
-  fn as_any(&self) -> &dyn Any {
+  fn as_any(&self) -> &dyn std::any::Any {
     self
   }
 
-  fn as_any_mut(&mut self) -> &mut dyn Any {
+  fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
     self
   }
 }

@@ -1,17 +1,14 @@
 use std::collections::BTreeMap;
 
-use summon_vm::{
+use crate::{
+  circuit_signal::{CircuitSignal, CircuitSignalData},
   operations::{op_minus, op_mul, op_plus, op_triple_eq_impl},
   type_error_builtin::ToTypeError,
   unary_op::UnaryOp,
+  val_dynamic_downcast::val_dynamic_downcast,
   vs_object::VsObject,
   vs_value::{ToDynamicVal, ToVal, Val, VsType},
   LoadFunctionResult, ValTrait,
-};
-
-use crate::{
-  circuit_signal::{CircuitSignal, CircuitSignalData},
-  val_dynamic_downcast::val_dynamic_downcast,
 };
 
 /**
@@ -257,7 +254,7 @@ fn arithmetic_merge_map<'a, K: std::cmp::Ord + Clone>(
 pub struct CouldNotMerge(pub Val, pub Val);
 
 impl ValTrait for CouldNotMerge {
-  fn typeof_(&self) -> summon_vm::vs_value::VsType {
+  fn typeof_(&self) -> crate::vs_value::VsType {
     VsType::Object
   }
 
@@ -289,11 +286,11 @@ impl ValTrait for CouldNotMerge {
     None
   }
 
-  fn as_array_data(&self) -> Option<std::rc::Rc<summon_vm::vs_array::VsArray>> {
+  fn as_array_data(&self) -> Option<std::rc::Rc<crate::vs_array::VsArray>> {
     None
   }
 
-  fn as_class_data(&self) -> Option<std::rc::Rc<summon_vm::vs_class::VsClass>> {
+  fn as_class_data(&self) -> Option<std::rc::Rc<crate::vs_class::VsClass>> {
     None
   }
 

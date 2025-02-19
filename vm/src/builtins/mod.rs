@@ -10,7 +10,6 @@ mod math_builtin;
 mod number_builtin;
 pub mod range_error_builtin;
 mod string_builtin;
-mod summon_builtin;
 mod symbol_builtin;
 pub mod type_error_builtin;
 
@@ -26,7 +25,7 @@ use self::{
   console_builtin::ConsoleBuiltin, debug_builtin::DebugBuiltin, error_builtin::ErrorBuiltin,
   internal_error_builtin::InternalErrorBuiltin, math_builtin::MathBuiltin,
   number_builtin::NumberBuiltin, range_error_builtin::RangeErrorBuiltin,
-  string_builtin::StringBuiltin, summon_builtin::SummonBuiltin, symbol_builtin::SymbolBuiltin,
+  string_builtin::StringBuiltin, symbol_builtin::SymbolBuiltin,
   type_error_builtin::TypeErrorBuiltin,
 };
 
@@ -49,5 +48,4 @@ pub static BUILTIN_VALS: [fn() -> Val; BUILTIN_COUNT] = [
   || VsSymbol::ITERATOR.to_val(),
   || BigIntBuiltin {}.to_val(),
   || ConsoleBuiltin {}.to_val(),
-  || SummonBuiltin {}.to_val(),
 ];

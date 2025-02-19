@@ -9,6 +9,5 @@ mod shake_tree;
 mod simplify;
 mod simplify_jumps;
 pub mod try_to_kal;
-pub mod try_to_val;
 
 pub use optimize::optimize;
