@@ -137,11 +137,18 @@ impl CircuitBuilder {
     }
 
     let mut signals_to_process = vec![signal.clone()];
+    let mut signals_ids_processed = HashSet::<usize>::new();
     let mut signal_id_to_parent_signals = HashMap::<usize, Vec<CircuitSignal>>::new();
     let mut signal_id_to_dep_ids = HashMap::<usize, HashSet<usize>>::new();
     let mut id_to_leaf_signal = BTreeMap::<usize, CircuitSignal>::new();
 
     while let Some(signal) = signals_to_process.pop() {
+      if signals_ids_processed.contains(&signal.id) {
+        continue;
+      }
+
+      signals_ids_processed.insert(signal.id);
+
       let mut dep_ids = HashSet::<usize>::new();
 
       for dep in get_signal_dependencies(&signal) {
@@ -202,11 +209,11 @@ impl CircuitBuilder {
       swap(&mut id_to_leaf_signal, &mut next_id_to_leaf_signal);
     }
 
-    if let Some(wire_id) = self.wires_included.get(&signal.id) {
-      return *wire_id;
-    }
+    let Some(wire_id) = self.wires_included.get(&signal.id) else {
+      panic!("Failed to include signal");
+    };
 
-    panic!("Failed to include signal");
+    *wire_id
   }
 }
 
