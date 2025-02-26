@@ -179,7 +179,7 @@ impl CircuitBuilder {
           .map(|dep| self.include_val_shallow(dep))
           .collect::<Vec<usize>>();
 
-        self.include_signal_shallow(signal, dependent_ids);
+        self.include_signal_shallow(leaf_signal, dependent_ids);
 
         for parent_signal in signal_id_to_parent_signals
           .get(&leaf_signal.id)
