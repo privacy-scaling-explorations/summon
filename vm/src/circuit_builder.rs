@@ -16,6 +16,7 @@ pub struct CircuitBuilder {
   pub gates: Vec<Gate>,
   pub wire_count: usize,
   pub wires_included: HashMap<usize, usize>, // CircuitSignal.id -> wire_id
+  pub signal_data: Vec<Option<Box<CircuitSignalData>>>, // wire_id -> CircuitSignalData
   pub constants: HashMap<usize, usize>,      // value -> wire_id
 }
 
@@ -61,8 +62,7 @@ impl CircuitBuilder {
           return *wire_id;
         }
 
-        let wire_id = self.wire_count;
-        self.wire_count += 1;
+        let wire_id = self.allocate_wire(None);
         self.constants.insert(value, wire_id);
 
         wire_id
@@ -82,8 +82,7 @@ impl CircuitBuilder {
           return *wire_id;
         }
 
-        let wire_id = self.wire_count;
-        self.wire_count += 1;
+        let wire_id = self.allocate_wire(None);
         self.constants.insert(value, wire_id);
 
         wire_id
@@ -106,8 +105,7 @@ impl CircuitBuilder {
     signal: &CircuitSignal,
     dependent_ids: Vec<usize>,
   ) -> usize {
-    let wire_id = self.wire_count;
-    self.wire_count += 1;
+    let wire_id = self.allocate_wire(Some(signal));
 
     let gate = match &signal.data {
       CircuitSignalData::Input => panic!("Input should have been included earlier"),
@@ -214,6 +212,30 @@ impl CircuitBuilder {
     };
 
     *wire_id
+  }
+
+  fn allocate_wire(&mut self, signal: Option<&CircuitSignal>) -> usize {
+    let wire_id = self.wire_count;
+    self.wire_count += 1;
+
+    self
+      .signal_data
+      .push(signal.map(|s| Box::new(s.data.clone())));
+
+    wire_id
+  }
+
+  /**
+   * Drop the signal data
+   *
+   * This is important to avoid blowing the stack. Signals can form a very deep tree, so if they are
+   * dropped from the root then the stack grows to the size of the tree to drop all the data. By
+   * retaining the children before dropping the parents, the parents do not recursively drop their
+   * children, and the stack remains small.
+   */
+  pub fn drop_signal_data(&mut self) {
+    self.signal_data.reverse(); // switch from child,parent order to parent,child order
+    self.signal_data.clear(); // drops parents first
   }
 }
 
