@@ -1,12 +1,11 @@
 use std::{cmp::max, collections::BTreeMap};
 
-use bristol_circuit::{BristolCircuit, CircuitInfo, ConstantInfo, Gate as BristolGate};
 use crate::{binary_op::BinaryOp, unary_op::UnaryOp};
+use bristol_circuit::{BristolCircuit, CircuitInfo, ConstantInfo, Gate as BristolGate};
 
 use crate::bristol_op_strings::{to_bristol_binary_op, to_bristol_unary_op};
 
-#[derive(Default)]
-#[derive(Debug)]
+#[derive(Default, Debug)]
 pub struct Circuit {
   pub size: usize,
   pub inputs: BTreeMap<String, usize>,
