@@ -182,6 +182,9 @@ fn build(input_len: usize, outputs: Vec<Val>) -> (Vec<usize>, CircuitBuilder) {
   builder.include_inputs(input_len);
   let output_ids = builder.include_outputs(&outputs);
 
+  drop(outputs);
+  builder.drop_signal_data();
+
   (output_ids, builder)
 }
 

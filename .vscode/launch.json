@@ -12,7 +12,7 @@
         "args": [
           "build",
           "--bin=summonc",
-          "--package=cli"
+          "--package=summon_cli"
         ],
         "filter": {
           "name": "summonc",
@@ -20,7 +20,7 @@
         }
       },
       "args": [
-        "examples/nthPrime.ts"
+        "foo.ts"
       ],
       "cwd": "${workspaceFolder}"
     },
