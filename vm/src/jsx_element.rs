@@ -150,10 +150,7 @@ fn write_attributes(
 ) -> fmt::Result {
   for (key, val) in attrs {
     if key == "checked" {
-      match val.is_truthy() {
-        true => write!(f, " checked")?,
-        false => {}
-      }
+      if val.is_truthy() { write!(f, " checked")? }
 
       continue;
     }

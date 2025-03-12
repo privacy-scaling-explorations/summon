@@ -1731,10 +1731,7 @@ impl ScopeAnalysis {
       }
       Pat::Array(array_pat) => {
         for elem in &array_pat.elems {
-          match elem {
-            Some(pat) => self.param_pat(scope, pat),
-            None => {}
-          }
+          if let Some(pat) = elem { self.param_pat(scope, pat) }
         }
       }
       Pat::Rest(rest_pat) => {

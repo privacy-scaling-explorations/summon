@@ -66,13 +66,13 @@ pub struct ExpressionCompiler<'a, 'fnc> {
   pub fnc: &'a mut FunctionCompiler<'fnc>,
 }
 
-impl<'a, 'fnc> DiagnosticContainer for ExpressionCompiler<'a, 'fnc> {
+impl DiagnosticContainer for ExpressionCompiler<'_, '_> {
   fn diagnostics_mut(&self) -> &RefCell<Vec<Diagnostic>> {
     self.fnc.diagnostics_mut()
   }
 }
 
-impl<'a, 'fnc> ExpressionCompiler<'a, 'fnc> {
+impl ExpressionCompiler<'_, '_> {
   pub fn compile_top_level(
     &mut self,
     expr: &swc_ecma_ast::Expr,

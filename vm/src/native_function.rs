@@ -20,9 +20,7 @@ impl<'a> ThisWrapper<'a> {
   }
 
   pub fn get(&self) -> Val {
-    match &self.this {
-      _ => self.this.clone(),
-    }
+    self.this.clone()
   }
 
   pub fn get_mut(&mut self) -> Result<&mut Val, Val> {

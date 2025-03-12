@@ -23,7 +23,7 @@ impl TargetAccessor {
   pub fn is_eligible_expr(ec: &ExpressionCompiler, expr: &swc_ecma_ast::Expr) -> bool {
     use swc_ecma_ast::Expr::*;
 
-    return match expr {
+    match expr {
       Ident(ident) => match ec.fnc.lookup(&crate::ident::Ident::from_swc_ident(ident)) {
         Some(name) => !name.effectively_const,
         _ => false, // TODO: InternalError?
@@ -46,7 +46,7 @@ impl TargetAccessor {
       // TODO: OptChain
       //
       _ => false, // TODO: Others may be eligible but not implemented?
-    };
+    }
   }
 
   pub fn compile(

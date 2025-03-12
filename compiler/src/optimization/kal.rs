@@ -194,15 +194,9 @@ impl Kal {
           let mut properties = Vec::<(asm::Value, asm::Value)>::new();
 
           for (k, v) in &x.properties {
-            let k = match k.try_to_value() {
-              Some(k) => k,
-              None => return None,
-            };
+            let k = k.try_to_value()?;
 
-            let v = match v.try_to_value() {
-              Some(v) => v,
-              None => return None,
-            };
+            let v = v.try_to_value()?;
 
             properties.push((k, v));
           }
