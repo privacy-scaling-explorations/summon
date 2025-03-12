@@ -22,7 +22,7 @@ swc_ecma_parser = "0.102.2"
 strum = "0.27.1"
 strum_macros = "0.27.1"
 tiny-keccak = { version = "2.0", features = ["keccak"] }
-url = "2.2.1"
+url = "2"
 summon_compiler = { path = "compiler" }
 summon_vm = { path = "vm" }
 summon_common = { path = "common" }
