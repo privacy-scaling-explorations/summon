@@ -4,8 +4,8 @@ use std::{
   collections::{BTreeMap, HashSet},
 };
 
-use swc_common::Spanned;
 use summon_common::BUILTIN_NAMES;
+use swc_common::Spanned;
 
 use crate::{
   asm::{Builtin, Register, Value},
@@ -517,7 +517,7 @@ impl ScopeAnalysis {
       self.param_pat(&child_scope, &param.pat);
     }
 
-    for body in &function.body {
+    if let Some(body) = &function.body {
       self.function_level_hoists(&child_scope, body);
       self.block_stmt(&child_scope, body);
     }
@@ -676,7 +676,7 @@ impl ScopeAnalysis {
       Stmt::If(if_) => {
         self.function_level_hoists_stmt(scope, &if_.cons);
 
-        for alt in &if_.alt {
+        if let Some(alt) = &if_.alt {
           self.function_level_hoists_stmt(scope, alt);
         }
       }
@@ -691,11 +691,11 @@ impl ScopeAnalysis {
       Stmt::Try(try_) => {
         self.function_level_hoists(scope, &try_.block);
 
-        for catch in &try_.handler {
+        if let Some(catch) = &try_.handler {
           self.function_level_hoists(scope, &catch.body);
         }
 
-        for finally in &try_.finalizer {
+        if let Some(finally) = &try_.finalizer {
           self.function_level_hoists(scope, finally);
         }
       }
@@ -875,7 +875,7 @@ impl ScopeAnalysis {
   fn var_declarator(&mut self, scope: &Scope, var_declarator: &swc_ecma_ast::VarDeclarator) {
     self.var_declarator_pat(scope, &var_declarator.name);
 
-    for init in &var_declarator.init {
+    if let Some(init) = &var_declarator.init {
       self.expr(scope, init);
     }
   }
@@ -943,7 +943,7 @@ impl ScopeAnalysis {
           }
         }
 
-        for body in &constructor.body {
+        if let Some(body) = &constructor.body {
           self.block_stmt(&child_scope, body);
         }
       }
@@ -1595,7 +1595,7 @@ impl ScopeAnalysis {
         self.expr(scope, &if_.test);
         self.stmt(scope, &if_.cons);
 
-        for alt in &if_.alt {
+        if let Some(alt) = &if_.alt {
           self.stmt(scope, alt);
         }
       }
@@ -1604,7 +1604,7 @@ impl ScopeAnalysis {
         let child_scope = scope.nest(None);
 
         for case in &switch_.cases {
-          for test in &case.test {
+          if let Some(test) = &case.test {
             self.expr(&child_scope, test);
           }
 
@@ -1619,17 +1619,17 @@ impl ScopeAnalysis {
       Stmt::Try(try_) => {
         self.block_stmt(scope, &try_.block);
 
-        for catch in &try_.handler {
+        if let Some(catch) = &try_.handler {
           let child_scope = scope.nest(None);
 
-          for param in &catch.param {
+          if let Some(param) = &catch.param {
             self.param_pat(&child_scope, param);
           }
 
           self.block_stmt(&child_scope, &catch.body);
         }
 
-        for finally in &try_.finalizer {
+        if let Some(finally) = &try_.finalizer {
           self.block_stmt(scope, finally);
         }
       }
@@ -1644,7 +1644,7 @@ impl ScopeAnalysis {
       Stmt::For(for_) => {
         let child_scope = scope.nest(None);
 
-        for init in &for_.init {
+        if let Some(init) = &for_.init {
           if let swc_ecma_ast::VarDeclOrExpr::VarDecl(var_decl) = init {
             self.block_level_hoists_var_decl(&child_scope, var_decl);
           }
@@ -1659,11 +1659,11 @@ impl ScopeAnalysis {
           };
         }
 
-        for test in &for_.test {
+        if let Some(test) = &for_.test {
           self.expr(&child_scope, test);
         }
 
-        for update in &for_.update {
+        if let Some(update) = &for_.update {
           self.expr(&child_scope, update);
         }
 
