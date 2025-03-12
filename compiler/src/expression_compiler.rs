@@ -462,22 +462,18 @@ impl ExpressionCompiler<'_, '_> {
     binary_op: swc_ecma_ast::BinaryOp,
     target_register: Option<Register>,
   ) -> CompiledExpression {
-    use swc_ecma_ast::Pat;
-    use swc_ecma_ast::PatOrExpr;
+    use swc_ecma_ast::AssignTarget;
 
     let mut target = match &assign_expr.left {
-      PatOrExpr::Expr(expr) => TargetAccessor::compile(self, expr, true),
-      PatOrExpr::Pat(pat) => match &**pat {
-        Pat::Ident(ident) => TargetAccessor::Register(self.get_register_for_ident_mutation(
-          &CrateIdent::from_swc_ident(&ident_to_ident_name(&ident.id)),
-        )),
-        _ => {
-          self.error(pat.span(), "Invalid lvalue expression");
-          let bad_reg = self.fnc.allocate_numbered_reg("_bad_lvalue");
+      AssignTarget::Simple(simple_assign_target) => {
+        TargetAccessor::compile_simple_assign_target(self, simple_assign_target, true)
+      }
+      AssignTarget::Pat(pat) => {
+        self.error(pat.span(), "Invalid lvalue expression");
+        let bad_reg = self.fnc.allocate_numbered_reg("_bad_lvalue");
 
-          TargetAccessor::Register(bad_reg)
-        }
-      },
+        TargetAccessor::Register(bad_reg)
+      }
     };
 
     let mut nested_registers = vec![];
