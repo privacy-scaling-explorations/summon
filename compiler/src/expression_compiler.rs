@@ -5,7 +5,7 @@ use swc_common::Spanned;
 
 use crate::asm::{Array, Instruction, Label, Number, Object, Register, Structured, Value};
 use crate::diagnostic::{Diagnostic, DiagnosticContainer, DiagnosticReporter};
-use crate::function_compiler::{FunctionCompiler, Functionish};
+use crate::function_compiler::{ident_to_ident_name, FunctionCompiler, Functionish};
 use crate::get_span_text::get_span_text;
 use crate::ident::Ident as CrateIdent;
 use crate::scope::{NameId, OwnerId};
@@ -129,7 +129,10 @@ impl ExpressionCompiler<'_, '_> {
 
         self.compile(seq_exp.exprs.last().unwrap(), target_register)
       }
-      Ident(ident) => self.ident(&CrateIdent::from_swc_ident(ident), target_register),
+      Ident(ident) => self.ident(
+        &CrateIdent::from_swc_ident(&ident_to_ident_name(ident)),
+        target_register,
+      ),
       Lit(lit) => self.compile_literal(lit).to_ce(),
       Tpl(tpl) => self.template_literal(tpl, target_register),
       TaggedTpl(tagged_tpl) => {
@@ -191,6 +194,11 @@ impl ExpressionCompiler<'_, '_> {
       }
       Invalid(invalid) => {
         self.error(invalid.span, "Invalid expression");
+
+        CompiledExpression::empty()
+      }
+      TsSatisfies(ts_satisfies) => {
+        self.todo(ts_satisfies.span, "TsSatisfies expression");
 
         CompiledExpression::empty()
       }
@@ -390,10 +398,11 @@ impl ExpressionCompiler<'_, '_> {
   ) -> CompiledExpression {
     let mut at = match &assign_expr.left {
       swc_ecma_ast::PatOrExpr::Pat(pat) => match &**pat {
-        swc_ecma_ast::Pat::Ident(ident) => {
-          TargetAccessor::compile_ident(self, &CrateIdent::from_swc_ident(&ident.id))
-        }
-        swc_ecma_ast::Pat::Expr(expr) => TargetAccessor::compile(self, expr, true),
+        swc_ecma_ast::Pat::Ident(ident) => TargetAccessor::compile_ident(
+          self,
+          &CrateIdent::from_swc_ident(&ident_to_ident_name(&ident.id)),
+        ),
+        swc_ecma_ast::Pat::Expr(expr) => TargetAccessor::compile(self, expr.as_ref(), true),
         _ => return self.assign_pat_eq(pat, &assign_expr.right, target_register),
       },
       swc_ecma_ast::PatOrExpr::Expr(expr) => TargetAccessor::compile(self, expr, true),
@@ -459,9 +468,9 @@ impl ExpressionCompiler<'_, '_> {
     let mut target = match &assign_expr.left {
       PatOrExpr::Expr(expr) => TargetAccessor::compile(self, expr, true),
       PatOrExpr::Pat(pat) => match &**pat {
-        Pat::Ident(ident) => TargetAccessor::Register(
-          self.get_register_for_ident_mutation(&CrateIdent::from_swc_ident(&ident.id)),
-        ),
+        Pat::Ident(ident) => TargetAccessor::Register(self.get_register_for_ident_mutation(
+          &CrateIdent::from_swc_ident(&ident_to_ident_name(&ident.id)),
+        )),
         _ => {
           self.error(pat.span(), "Invalid lvalue expression");
           let bad_reg = self.fnc.allocate_numbered_reg("_bad_lvalue");
@@ -540,7 +549,10 @@ impl ExpressionCompiler<'_, '_> {
           Prop::Shorthand(ident) => {
             let prop_key = Value::String(ident.sym.to_string());
 
-            let mut compiled_value = self.ident(&CrateIdent::from_swc_ident(ident), None);
+            let mut compiled_value = self.ident(
+              &CrateIdent::from_swc_ident(&ident_to_ident_name(ident)),
+              None,
+            );
             sub_nested_registers.append(&mut compiled_value.nested_registers);
             compiled_value.release_checker.has_unreleased_registers = false;
             let prop_value = compiled_value.value;
@@ -585,7 +597,7 @@ impl ExpressionCompiler<'_, '_> {
 
             FunctionCompiler::new(self.fnc.mc).compile(
               p.clone(),
-              Functionish::Fn(fn_ident, method.function.clone()),
+              Functionish::Fn(fn_ident, method.function.as_ref().clone()),
             );
 
             object_asm.properties.push((prop_key, Value::Pointer(p)));
@@ -1016,11 +1028,17 @@ impl ExpressionCompiler<'_, '_> {
       .fnc
       .mc
       .scope_analysis
-      .get_register_captures(&fn_to_owner_id(fn_.ident.as_ref(), &fn_.function));
+      .get_register_captures(&fn_to_owner_id(
+        fn_.ident.as_ref().map(ident_to_ident_name).as_ref(),
+        &fn_.function,
+      ));
 
     FunctionCompiler::new(self.fnc.mc).compile(
       definition_pointer.clone(),
-      Functionish::Fn(fn_.ident.clone(), fn_.function.clone()),
+      Functionish::Fn(
+        fn_.ident.as_ref().map(ident_to_ident_name),
+        fn_.function.as_ref().clone(),
+      ),
     );
 
     match capture_params.len() {
@@ -1578,9 +1596,12 @@ impl ExpressionCompiler<'_, '_> {
             }
             ObjectPatProp::Assign(assign) => {
               let key = assign.key.sym.to_string();
-              let reg = self
-                .fnc
-                .get_variable_register(&CrateIdent::from_swc_ident(&assign.key));
+              let reg =
+                self
+                  .fnc
+                  .get_variable_register(&CrateIdent::from_swc_ident(&ident_to_ident_name(
+                    &assign.key,
+                  )));
 
               self.fnc.push(Instruction::Sub(
                 Value::Register(register.clone()),
@@ -1878,7 +1899,7 @@ pub fn value_from_literal(lit: &swc_ecma_ast::Lit) -> Result<Value, &'static str
     Bool(bool_) => Value::Bool(bool_.value),
     Null(_) => Value::Null,
     Num(num) => Value::Number(Number(num.value)),
-    BigInt(bigint) => Value::BigInt(bigint.value.clone()),
+    BigInt(bigint) => Value::BigInt(bigint.value.as_ref().clone()),
     Regex(_) => return Err("Regex literals"),
     JSXText(_) => return Err("JSXText literals"),
   })

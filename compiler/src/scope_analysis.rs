@@ -11,6 +11,7 @@ use crate::{
   asm::{Builtin, Register, Value},
   constants::CONSTANTS,
   diagnostic::{DiagnosticContainer, DiagnosticReporter},
+  function_compiler::ident_to_ident_name,
   ident::Ident,
   name_allocator::{PointerAllocator, RegAllocator},
   scope::{init_std_scope, NameId, OwnerId, Scope, ScopeTrait},
@@ -47,7 +48,7 @@ pub enum NameType {
 pub struct Name {
   pub id: NameId,
   pub owner_id: OwnerId,
-  pub sym: swc_atoms::JsWord,
+  pub sym: swc_atoms::Atom,
   pub type_: NameType,
   pub effectively_const: bool,
   pub value: Value,
@@ -98,7 +99,7 @@ impl ScopeAnalysis {
         Name {
           id: NameId::Builtin(builtin.clone()),
           owner_id: OwnerId::Module,
-          sym: swc_atoms::JsWord::from(builtin_name),
+          sym: swc_atoms::Atom::from(builtin_name),
           type_: NameType::Builtin,
           effectively_const: true,
           value: Value::Builtin(builtin),
@@ -115,7 +116,7 @@ impl ScopeAnalysis {
         Name {
           id: NameId::Constant(name),
           owner_id: OwnerId::Module,
-          sym: swc_atoms::JsWord::from(name),
+          sym: swc_atoms::Atom::from(name),
           type_: NameType::Constant,
           effectively_const: true,
           value,
@@ -247,7 +248,7 @@ impl ScopeAnalysis {
     &mut self,
     scope: &Scope,
     type_: NameType,
-    origin_ident: &swc_ecma_ast::Ident,
+    origin_ident: &swc_ecma_ast::IdentName,
   ) {
     match scope.get(&origin_ident.sym) {
       None => {}
@@ -288,7 +289,7 @@ impl ScopeAnalysis {
     &mut self,
     scope: &Scope,
     type_: NameType,
-    origin_ident: &swc_ecma_ast::Ident,
+    origin_ident: &swc_ecma_ast::IdentName,
     tdz_end: Option<swc_common::BytePos>,
   ) {
     let reg = Value::Register(self.allocate_reg(&scope.borrow().owner_id, &origin_ident.sym));
@@ -418,13 +419,25 @@ impl ScopeAnalysis {
           return;
         }
 
-        self.insert_pointer_name(scope, NameType::Import, &named_specifier.local);
+        self.insert_pointer_name(
+          scope,
+          NameType::Import,
+          &ident_to_ident_name(&named_specifier.local),
+        );
       }
       Default(default_specifier) => {
-        self.insert_pointer_name(scope, NameType::Import, &default_specifier.local);
+        self.insert_pointer_name(
+          scope,
+          NameType::Import,
+          &ident_to_ident_name(&default_specifier.local),
+        );
       }
       Namespace(namespace_specifier) => {
-        self.insert_pointer_name(scope, NameType::Import, &namespace_specifier.local);
+        self.insert_pointer_name(
+          scope,
+          NameType::Import,
+          &ident_to_ident_name(&namespace_specifier.local),
+        );
       }
     }
   }
@@ -440,15 +453,20 @@ impl ScopeAnalysis {
         }
 
         match &named_specifier.orig {
-          ModuleExportName::Ident(ident) => self.ident(scope, &Ident::from_swc_ident(ident)),
+          ModuleExportName::Ident(ident) => {
+            self.ident(scope, &Ident::from_swc_ident(&ident_to_ident_name(ident)))
+          }
           ModuleExportName::Str(_) => self.todo(export_specifier.span(), "ModuleExportName::Str"),
         }
       }
-      Default(default_specifier) => {
-        self.ident(scope, &Ident::from_swc_ident(&default_specifier.exported))
-      }
+      Default(default_specifier) => self.ident(
+        scope,
+        &Ident::from_swc_ident(&ident_to_ident_name(&default_specifier.exported)),
+      ),
       Namespace(namespace_specifier) => match &namespace_specifier.name {
-        ModuleExportName::Ident(ident) => self.ident(scope, &Ident::from_swc_ident(ident)),
+        ModuleExportName::Ident(ident) => {
+          self.ident(scope, &Ident::from_swc_ident(&ident_to_ident_name(ident)))
+        }
         ModuleExportName::Str(_) => self.todo(export_specifier.span(), "ModuleExportName::Str"),
       },
     }
@@ -468,7 +486,12 @@ impl ScopeAnalysis {
       Decl::Class(class_decl) => {
         self.class_(scope, &Some(class_decl.ident.clone()), &class_decl.class)
       }
-      Decl::Fn(fn_decl) => self.function(scope, Some(&fn_decl.ident), &fn_decl.function, false),
+      Decl::Fn(fn_decl) => self.function(
+        scope,
+        Some(&ident_to_ident_name(&fn_decl.ident)),
+        &fn_decl.function,
+        false,
+      ),
       Decl::Var(var_decl) => {
         for decl in &var_decl.decls {
           self.var_declarator(scope, decl);
@@ -488,13 +511,14 @@ impl ScopeAnalysis {
         }
       }
       Decl::TsModule(ts_module) => self.not_supported(ts_module.span, "TsModule declaration"),
+      Decl::Using(using) => self.todo(using.span, "Using declaration"),
     }
   }
 
   fn function(
     &mut self,
     scope: &Scope,
-    name: Option<&swc_ecma_ast::Ident>,
+    name: Option<&swc_ecma_ast::IdentName>,
     function: &swc_ecma_ast::Function,
     is_method: bool,
   ) {
@@ -540,10 +564,18 @@ impl ScopeAnalysis {
         }
         ModuleDecl::ExportDecl(ed) => match &ed.decl {
           swc_ecma_ast::Decl::Class(class_decl) => {
-            self.insert_pointer_name(scope, NameType::Class, &class_decl.ident);
+            self.insert_pointer_name(
+              scope,
+              NameType::Class,
+              &ident_to_ident_name(&class_decl.ident),
+            );
           }
           swc_ecma_ast::Decl::Fn(fn_decl) => {
-            self.insert_pointer_name(scope, NameType::Function, &fn_decl.ident);
+            self.insert_pointer_name(
+              scope,
+              NameType::Function,
+              &ident_to_ident_name(&fn_decl.ident),
+            );
           }
           swc_ecma_ast::Decl::Var(var_decl) => {
             let name_type = match var_decl.kind {
@@ -554,16 +586,19 @@ impl ScopeAnalysis {
 
             for decl in &var_decl.decls {
               for ident in self.get_pat_idents(&decl.name) {
-                self.insert_pointer_name(scope, name_type, &ident);
+                self.insert_pointer_name(scope, name_type, &ident_to_ident_name(&ident));
               }
             }
           }
           swc_ecma_ast::Decl::TsInterface(_) => {}
           swc_ecma_ast::Decl::TsTypeAlias(_) => {}
           swc_ecma_ast::Decl::TsEnum(ts_enum) => {
-            self.insert_pointer_name(scope, NameType::Enum, &ts_enum.id);
+            self.insert_pointer_name(scope, NameType::Enum, &ident_to_ident_name(&ts_enum.id));
           }
           swc_ecma_ast::Decl::TsModule(_) => {
+            // Diagnostic emitted after hoist processing
+          }
+          swc_ecma_ast::Decl::Using(_) => {
             // Diagnostic emitted after hoist processing
           }
         },
@@ -571,12 +606,12 @@ impl ScopeAnalysis {
         ModuleDecl::ExportDefaultDecl(edd) => match &edd.decl {
           swc_ecma_ast::DefaultDecl::Class(class_decl) => {
             if let Some(ident) = &class_decl.ident {
-              self.insert_pointer_name(scope, NameType::Class, ident);
+              self.insert_pointer_name(scope, NameType::Class, &ident_to_ident_name(ident));
             }
           }
           swc_ecma_ast::DefaultDecl::Fn(fn_decl) => {
             if let Some(ident) = &fn_decl.ident {
-              self.insert_pointer_name(scope, NameType::Function, ident);
+              self.insert_pointer_name(scope, NameType::Function, &ident_to_ident_name(ident));
             }
           }
           swc_ecma_ast::DefaultDecl::TsInterfaceDecl(_) => {}
@@ -616,13 +651,13 @@ impl ScopeAnalysis {
           if var_decl.kind == swc_ecma_ast::VarDeclKind::Var {
             for decl in &var_decl.decls {
               for ident in self.get_pat_idents(&decl.name) {
-                self.insert_reg_name(scope, NameType::Var, &ident, None);
+                self.insert_reg_name(scope, NameType::Var, &ident_to_ident_name(&ident), None);
               }
             }
           }
         }
         Decl::TsEnum(ts_enum) => {
-          self.insert_pointer_name(scope, NameType::Enum, &ts_enum.id);
+          self.insert_pointer_name(scope, NameType::Enum, &ident_to_ident_name(&ts_enum.id));
         }
         _ => {}
       },
@@ -636,7 +671,7 @@ impl ScopeAnalysis {
           if var_decl.kind == swc_ecma_ast::VarDeclKind::Var {
             for decl in &var_decl.decls {
               for ident in self.get_pat_idents(&decl.name) {
-                self.insert_reg_name(scope, NameType::Var, &ident, None);
+                self.insert_reg_name(scope, NameType::Var, &ident_to_ident_name(&ident), None);
               }
             }
           }
@@ -647,7 +682,7 @@ impl ScopeAnalysis {
           if var_decl.kind == swc_ecma_ast::VarDeclKind::Var {
             for decl in &var_decl.decls {
               for ident in self.get_pat_idents(&decl.name) {
-                self.insert_reg_name(scope, NameType::Var, &ident, None);
+                self.insert_reg_name(scope, NameType::Var, &ident_to_ident_name(&ident), None);
               }
             }
           }
@@ -658,7 +693,7 @@ impl ScopeAnalysis {
           if var_decl.kind == swc_ecma_ast::VarDeclKind::Var {
             for decl in &var_decl.decls {
               for ident in self.get_pat_idents(&decl.name) {
-                self.insert_reg_name(scope, NameType::Var, &ident, None);
+                self.insert_reg_name(scope, NameType::Var, &ident_to_ident_name(&ident), None);
               }
             }
           }
@@ -730,10 +765,10 @@ impl ScopeAnalysis {
 
     match decl {
       Decl::Class(class) => {
-        self.insert_pointer_name(scope, NameType::Class, &class.ident);
+        self.insert_pointer_name(scope, NameType::Class, &ident_to_ident_name(&class.ident));
       }
       Decl::Fn(fn_) => {
-        self.insert_pointer_name(scope, NameType::Function, &fn_.ident);
+        self.insert_pointer_name(scope, NameType::Function, &ident_to_ident_name(&fn_.ident));
       }
       Decl::Var(var_decl) => {
         self.block_level_hoists_var_decl(scope, var_decl);
@@ -741,7 +776,7 @@ impl ScopeAnalysis {
       Decl::TsInterface(_) => {}
       Decl::TsTypeAlias(_) => {}
       Decl::TsEnum(_) => {}
-      Decl::TsModule(_) => {
+      Decl::TsModule(_) | Decl::Using(_) => {
         // Diagnostic emitted after hoist processing
       }
     }
@@ -759,8 +794,15 @@ impl ScopeAnalysis {
         let owner_id = scope.borrow().owner_id.clone();
 
         match owner_id {
-          OwnerId::Span(..) => self.insert_reg_name(scope, name_type, &ident, Some(decl.span.hi)),
-          OwnerId::Module => self.insert_pointer_name(scope, name_type, &ident),
+          OwnerId::Span(..) => self.insert_reg_name(
+            scope,
+            name_type,
+            &ident_to_ident_name(&ident),
+            Some(decl.span.hi),
+          ),
+          OwnerId::Module => {
+            self.insert_pointer_name(scope, name_type, &ident_to_ident_name(&ident))
+          }
         }
       }
     }
@@ -794,7 +836,7 @@ impl ScopeAnalysis {
               self.get_pat_idents_impl(idents, &key_value.value);
             }
             swc_ecma_ast::ObjectPatProp::Assign(assign) => {
-              idents.push(assign.key.clone());
+              idents.push(assign.key.id.clone());
             }
             swc_ecma_ast::ObjectPatProp::Rest(rest) => {
               self.get_pat_idents_impl(idents, &rest.arg);
@@ -820,7 +862,7 @@ impl ScopeAnalysis {
       self.param_pat(&child_scope, param);
     }
 
-    match &arrow.body {
+    match arrow.body.as_ref() {
       swc_ecma_ast::BlockStmtOrExpr::BlockStmt(block) => {
         self.block_stmt(&child_scope, block);
       }
@@ -909,7 +951,7 @@ impl ScopeAnalysis {
     self.insert_this_name(&child_scope, owner_span);
 
     if let Some(ident) = ident {
-      self.insert_pointer_name(&child_scope, NameType::Class, ident);
+      self.insert_pointer_name(&child_scope, NameType::Class, &ident_to_ident_name(ident));
     }
 
     for member in &class_.body {
@@ -932,7 +974,12 @@ impl ScopeAnalysis {
             swc_ecma_ast::ParamOrTsParamProp::TsParamProp(ts_param_prop) => {
               match &ts_param_prop.param {
                 swc_ecma_ast::TsParamPropParam::Ident(ident) => {
-                  self.insert_reg_name(&child_scope, NameType::Param, &ident.id, None);
+                  self.insert_reg_name(
+                    &child_scope,
+                    NameType::Param,
+                    &ident_to_ident_name(&ident.id),
+                    None,
+                  );
                 }
                 swc_ecma_ast::TsParamPropParam::Assign(assign) => {
                   self.param_pat(&child_scope, &assign.left);
@@ -972,7 +1019,10 @@ impl ScopeAnalysis {
 
         self.function(
           scope,
-          Some(&private_method.key.id),
+          Some(&swc_ecma_ast::IdentName {
+            span: private_method.key.span,
+            sym: private_method.key.name.clone(),
+          }),
           &private_method.function,
           true,
         );
@@ -989,11 +1039,19 @@ impl ScopeAnalysis {
       StaticBlock(static_block) => {
         self.block_stmt(scope, &static_block.body);
       }
+      AutoAccessor(auto_accessor) => {
+        self.todo(auto_accessor.span(), "AutoAccessor");
+      }
     }
   }
 
   fn fn_expr(&mut self, scope: &Scope, fn_expr: &swc_ecma_ast::FnExpr) {
-    self.function(scope, fn_expr.ident.as_ref(), &fn_expr.function, false);
+    self.function(
+      scope,
+      fn_expr.ident.as_ref().map(ident_to_ident_name).as_ref(),
+      &fn_expr.function,
+      false,
+    );
   }
 
   fn expr(&mut self, scope: &Scope, expr: &swc_ecma_ast::Expr) {
@@ -1004,7 +1062,7 @@ impl ScopeAnalysis {
         self.ident(scope, &Ident::this(this.span));
       }
       Expr::Ident(ident) => {
-        self.ident(scope, &Ident::from_swc_ident(ident));
+        self.ident(scope, &Ident::from_swc_ident(&ident_to_ident_name(ident)));
       }
       Expr::Lit(_) => {}
       Expr::Array(array) => {
@@ -1108,7 +1166,7 @@ impl ScopeAnalysis {
       Expr::OptChain(opt_chain) => {
         use swc_ecma_ast::OptChainBase;
 
-        match &opt_chain.base {
+        match opt_chain.base.as_ref() {
           OptChainBase::Call(call) => {
             self.expr(scope, &call.callee);
 
@@ -1129,6 +1187,7 @@ impl ScopeAnalysis {
         self.todo(ts_instantiation.span, "TsInstantiation")
       }
       Expr::PrivateName(private_name) => self.todo(private_name.span, "PrivateName"),
+      Expr::TsSatisfies(ts_satisfies) => self.todo(ts_satisfies.span, "TsSatisfies"),
     }
   }
 
@@ -1226,7 +1285,10 @@ impl ScopeAnalysis {
 
     match pat {
       Pat::Ident(ident) => {
-        self.ident(scope, &Ident::from_swc_ident(&ident.id));
+        self.ident(
+          scope,
+          &Ident::from_swc_ident(&ident_to_ident_name(&ident.id)),
+        );
       }
       Pat::Array(array) => {
         for elem in array.elems.iter().flatten() {
@@ -1244,7 +1306,10 @@ impl ScopeAnalysis {
               self.pat(scope, &key_value.value);
             }
             swc_ecma_ast::ObjectPatProp::Assign(assign) => {
-              self.ident(scope, &Ident::from_swc_ident(&assign.key));
+              self.ident(
+                scope,
+                &Ident::from_swc_ident(&ident_to_ident_name(&assign.key)),
+              );
 
               if let Some(value) = &assign.value {
                 self.expr(scope, value);
@@ -1274,7 +1339,11 @@ impl ScopeAnalysis {
 
     match expr {
       Expr::Ident(ident) => {
-        self.mutate_ident(scope, &Ident::from_swc_ident(ident), optional);
+        self.mutate_ident(
+          scope,
+          &Ident::from_swc_ident(&ident_to_ident_name(ident)),
+          optional,
+        );
       }
       Expr::Member(member) => {
         self.mutate_expr(scope, &member.obj, optional);
@@ -1385,6 +1454,7 @@ impl ScopeAnalysis {
         self.todo(ts_instantiation.span, "mutate ts_instantiation")
       }
       Expr::PrivateName(private_name) => self.todo(private_name.span, "mutate private_name"),
+      Expr::TsSatisfies(ts_satisfies) => self.todo(ts_satisfies.span, "mutate ts_satisfies"),
     }
 
     if !optional {
@@ -1399,7 +1469,11 @@ impl ScopeAnalysis {
 
     match pat {
       Pat::Ident(ident) => {
-        self.mutate_ident(scope, &Ident::from_swc_ident(&ident.id), false);
+        self.mutate_ident(
+          scope,
+          &Ident::from_swc_ident(&ident_to_ident_name(&ident.id)),
+          false,
+        );
       }
       Pat::Array(array_pat) => {
         for elem in array_pat.elems.iter().flatten() {
@@ -1418,7 +1492,11 @@ impl ScopeAnalysis {
             swc_ecma_ast::ObjectPatProp::Assign(assign) => {
               // TODO: How is `({ y: x = 3 } = { y: 4 })` handled?
 
-              self.mutate_ident(scope, &Ident::from_swc_ident(&assign.key), false);
+              self.mutate_ident(
+                scope,
+                &Ident::from_swc_ident(&ident_to_ident_name(&assign.key)),
+                false,
+              );
 
               if let Some(value) = &assign.value {
                 // Note: Generally mutate_* only processes the mutation aspect
@@ -1527,7 +1605,7 @@ impl ScopeAnalysis {
     match prop_or_spread {
       PropOrSpread::Prop(prop) => match &**prop {
         swc_ecma_ast::Prop::Shorthand(ident) => {
-          self.ident(scope, &Ident::from_swc_ident(ident));
+          self.ident(scope, &Ident::from_swc_ident(&ident_to_ident_name(ident)));
         }
         swc_ecma_ast::Prop::KeyValue(key_value) => {
           self.prop_key(scope, &key_value.key);
@@ -1727,7 +1805,12 @@ impl ScopeAnalysis {
 
     match param_pat {
       Pat::Ident(ident) => {
-        self.insert_reg_name(scope, NameType::Param, &ident.id, None);
+        self.insert_reg_name(
+          scope,
+          NameType::Param,
+          &ident_to_ident_name(&ident.id),
+          None,
+        );
       }
       Pat::Array(array_pat) => {
         for pat in array_pat.elems.iter().flatten() {
@@ -1744,7 +1827,12 @@ impl ScopeAnalysis {
               self.param_pat(scope, &key_value.value);
             }
             swc_ecma_ast::ObjectPatProp::Assign(assign) => {
-              self.insert_reg_name(scope, NameType::Param, &assign.key, None);
+              self.insert_reg_name(
+                scope,
+                NameType::Param,
+                &ident_to_ident_name(&assign.key),
+                None,
+              );
 
               if let Some(default) = &assign.value {
                 self.expr(scope, default);
@@ -2058,13 +2146,11 @@ impl ScopeAnalysis {
     let start = swc_common::Span {
       lo: span.lo,
       hi: span.lo,
-      ctxt: span.ctxt,
     };
 
     let end = swc_common::Span {
       lo: span.hi,
       hi: span.hi,
-      ctxt: span.ctxt,
     };
 
     let mut deps = Vec::<Value>::new();
@@ -2092,11 +2178,12 @@ fn is_declare(decl: &swc_ecma_ast::Decl) -> bool {
     swc_ecma_ast::Decl::TsTypeAlias(ts_type_alias_decl) => ts_type_alias_decl.declare,
     swc_ecma_ast::Decl::TsEnum(ts_enum_decl) => ts_enum_decl.declare,
     swc_ecma_ast::Decl::TsModule(ts_module_decl) => ts_module_decl.declare,
+    swc_ecma_ast::Decl::Using(_using_decl) => false,
   }
 }
 
 pub fn fn_owner_span(
-  name: Option<&swc_ecma_ast::Ident>,
+  name: Option<&swc_ecma_ast::IdentName>,
   function: &swc_ecma_ast::Function,
 ) -> swc_common::Span {
   match name {
@@ -2106,7 +2193,7 @@ pub fn fn_owner_span(
 }
 
 pub fn fn_to_owner_id(
-  name: Option<&swc_ecma_ast::Ident>,
+  name: Option<&swc_ecma_ast::IdentName>,
   function: &swc_ecma_ast::Function,
 ) -> OwnerId {
   OwnerId::Span(fn_owner_span(name, function))

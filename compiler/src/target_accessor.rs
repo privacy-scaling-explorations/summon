@@ -4,6 +4,7 @@ use crate::{
   asm::{Instruction, Register, Value},
   diagnostic::DiagnosticReporter,
   expression_compiler::{CompiledExpression, ExpressionCompiler},
+  function_compiler::ident_to_ident_name,
   ident::Ident as CrateIdent,
 };
 use swc_common::Spanned;
@@ -24,10 +25,16 @@ impl TargetAccessor {
     use swc_ecma_ast::Expr::*;
 
     match expr {
-      Ident(ident) => match ec.fnc.lookup(&crate::ident::Ident::from_swc_ident(ident)) {
-        Some(name) => !name.effectively_const,
-        _ => false, // TODO: InternalError?
-      },
+      Ident(ident) => {
+        match ec
+          .fnc
+          .lookup(&crate::ident::Ident::from_swc_ident(&ident_to_ident_name(
+            ident,
+          ))) {
+          Some(name) => !name.effectively_const,
+          _ => false, // TODO: InternalError?
+        }
+      }
       This(_) => true,
       Member(member) => TargetAccessor::is_eligible_expr(ec, &member.obj),
 
@@ -57,7 +64,9 @@ impl TargetAccessor {
     use swc_ecma_ast::Expr::*;
 
     match expr {
-      Ident(ident) => TargetAccessor::compile_ident(ec, &CrateIdent::from_swc_ident(ident)),
+      Ident(ident) => {
+        TargetAccessor::compile_ident(ec, &CrateIdent::from_swc_ident(&ident_to_ident_name(ident)))
+      }
       This(this) => TargetAccessor::compile_ident(ec, &CrateIdent::this(this.span)),
       Member(member) => {
         let obj = TargetAccessor::compile(ec, &member.obj, false);
@@ -257,5 +266,6 @@ pub fn get_expr_type_str(expr: &swc_ecma_ast::Expr) -> &'static str {
     JSXElement(_) => "JSXElement",
     JSXFragment(_) => "JSXFragment",
     TsInstantiation(_) => "TsInstantiation",
+    TsSatisfies(_) => "TsSatisfies",
   }
 }

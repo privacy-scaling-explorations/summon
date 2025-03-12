@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 use swc_common::errors::{DiagnosticBuilder, Emitter};
 use swc_common::{errors::Handler, FileName, SourceMap, Spanned};
 use swc_ecma_ast::EsVersion;
-use swc_ecma_parser::{Syntax, TsConfig};
+use swc_ecma_parser::{Syntax, TsSyntax};
 
 use crate::asm::{
   Class, ContentHashable, Definition, DefinitionContent, FnLine, Instruction, Lazy, Meta, Module,
@@ -13,7 +13,7 @@ use crate::asm::{
 };
 use crate::diagnostic::{Diagnostic, DiagnosticContainer, DiagnosticReporter};
 use crate::expression_compiler::{CompiledExpression, ExpressionCompiler};
-use crate::function_compiler::{FunctionCompiler, Functionish};
+use crate::function_compiler::{ident_to_ident_name, FunctionCompiler, Functionish};
 use crate::ident::Ident;
 use crate::name_allocator::{ident_from_str, NameAllocator};
 use crate::scope::OwnerId;
@@ -48,17 +48,18 @@ pub fn parse(source: &str) -> (Option<swc_ecma_ast::Program>, Vec<Diagnostic>) {
 
   let swc_compiler = swc::Compiler::new(source_map.clone());
 
-  let file = source_map.new_source_file(FileName::Anon, source.into());
+  let file = source_map.new_source_file(Arc::new(FileName::Anon), source.into());
 
   let result = swc_compiler.parse_js(
     file,
     &handler,
     EsVersion::Es2022,
-    Syntax::Typescript(TsConfig {
+    Syntax::Typescript(TsSyntax {
       tsx: true,
       decorators: false,
       dts: false,
       no_early_errors: false,
+      disallow_ambiguous_jsx_like: true,
     }),
     swc::config::IsModule::Bool(true),
     None,
@@ -234,6 +235,7 @@ impl ModuleCompiler {
       TsTypeAlias(_) => {}
       TsEnum(ts_enum) => self.compile_enum_decl(false, ts_enum),
       TsModule(ts_module) => self.todo(ts_module.span, "TsModule declaration"),
+      Using(using) => self.todo(using.span, "Using declaration"),
     };
   }
 
@@ -270,7 +272,10 @@ impl ModuleCompiler {
       if let (Some(ident), Some(init)) = (ident, init) {
         let value = self.static_ec().expr(init);
 
-        let pointer = match self.scope_analysis.lookup(&Ident::from_swc_ident(ident)) {
+        let pointer = match self
+          .scope_analysis
+          .lookup(&Ident::from_swc_ident(&ident_to_ident_name(ident)))
+        {
           Some(name) => match &name.value {
             Value::Pointer(p) => p.clone(),
             _ => {
@@ -304,10 +309,10 @@ impl ModuleCompiler {
   fn compile_fn_decl(&mut self, export: bool, fn_: &swc_ecma_ast::FnDecl) {
     let fn_name = fn_.ident.sym.to_string();
 
-    let pointer = match self
-      .scope_analysis
-      .lookup_value(&OwnerId::Module, &Ident::from_swc_ident(&fn_.ident))
-    {
+    let pointer = match self.scope_analysis.lookup_value(
+      &OwnerId::Module,
+      &Ident::from_swc_ident(&ident_to_ident_name(&fn_.ident)),
+    ) {
       Some(Value::Pointer(p)) => p,
       _ => {
         self.internal_error(
@@ -328,15 +333,18 @@ impl ModuleCompiler {
 
     self.compile_fn(
       pointer,
-      Functionish::Fn(Some(fn_.ident.clone()), fn_.function.clone()),
+      Functionish::Fn(
+        Some(ident_to_ident_name(&fn_.ident)),
+        fn_.function.as_ref().clone(),
+      ),
     );
   }
 
   fn compile_enum_decl(&mut self, export: bool, ts_enum: &swc_ecma_ast::TsEnumDecl) {
-    let pointer = match self
-      .scope_analysis
-      .lookup_value(&OwnerId::Module, &Ident::from_swc_ident(&ts_enum.id))
-    {
+    let pointer = match self.scope_analysis.lookup_value(
+      &OwnerId::Module,
+      &Ident::from_swc_ident(&ident_to_ident_name(&ts_enum.id)),
+    ) {
       Some(Value::Pointer(p)) => p,
       _ => {
         self.internal_error(
@@ -373,10 +381,10 @@ impl ModuleCompiler {
       }
       DefaultDecl::Fn(fn_) => {
         let defn = match &fn_.ident {
-          Some(ident) => match self
-            .scope_analysis
-            .lookup_value(&OwnerId::Module, &Ident::from_swc_ident(ident))
-          {
+          Some(ident) => match self.scope_analysis.lookup_value(
+            &OwnerId::Module,
+            &Ident::from_swc_ident(&ident_to_ident_name(ident)),
+          ) {
             Some(Value::Pointer(p)) => p,
             _ => {
               self.internal_error(
@@ -394,7 +402,10 @@ impl ModuleCompiler {
 
         self.compile_fn(
           defn,
-          Functionish::Fn(fn_.ident.clone(), fn_.function.clone()),
+          Functionish::Fn(
+            fn_.ident.as_ref().map(ident_to_ident_name),
+            fn_.function.as_ref().clone(),
+          ),
         );
       }
       DefaultDecl::TsInterfaceDecl(_) => {
@@ -419,6 +430,7 @@ impl ModuleCompiler {
       Decl::TsTypeAlias(_) => {}
       Decl::TsEnum(ts_enum) => self.compile_enum_decl(true, ts_enum),
       Decl::TsModule(ts_module) => self.todo(ts_module.span, "TsModule declaration in export"),
+      Decl::Using(using) => self.todo(using.span, "Using declaration in export"),
     };
   }
 
@@ -483,10 +495,10 @@ impl ModuleCompiler {
 
               Some(defn)
             }
-            None => match self
-              .scope_analysis
-              .lookup_value(&OwnerId::Module, &Ident::from_swc_ident(orig_name))
-            {
+            None => match self.scope_analysis.lookup_value(
+              &OwnerId::Module,
+              &Ident::from_swc_ident(&ident_to_ident_name(orig_name)),
+            ) {
               Some(Value::Pointer(p)) => Some(p),
               lookup_result => {
                 self.internal_error(
@@ -615,10 +627,10 @@ impl ModuleCompiler {
             None => local_name.clone(),
           };
 
-          let pointer = match self
-            .scope_analysis
-            .lookup_value(&OwnerId::Module, &Ident::from_swc_ident(&named.local))
-          {
+          let pointer = match self.scope_analysis.lookup_value(
+            &OwnerId::Module,
+            &Ident::from_swc_ident(&ident_to_ident_name(&named.local)),
+          ) {
             Some(Value::Pointer(p)) => p,
             _ => {
               self.internal_error(
@@ -650,10 +662,10 @@ impl ModuleCompiler {
         Default(default) => {
           let local_name = default.local.sym.to_string();
 
-          let pointer = match self
-            .scope_analysis
-            .lookup_value(&OwnerId::Module, &Ident::from_swc_ident(&default.local))
-          {
+          let pointer = match self.scope_analysis.lookup_value(
+            &OwnerId::Module,
+            &Ident::from_swc_ident(&ident_to_ident_name(&default.local)),
+          ) {
             Some(Value::Pointer(p)) => p,
             _ => {
               self.internal_error(
@@ -678,10 +690,10 @@ impl ModuleCompiler {
         Namespace(namespace) => {
           let local_name = namespace.local.sym.to_string();
 
-          let pointer = match self
-            .scope_analysis
-            .lookup_value(&OwnerId::Module, &Ident::from_swc_ident(&namespace.local))
-          {
+          let pointer = match self.scope_analysis.lookup_value(
+            &OwnerId::Module,
+            &Ident::from_swc_ident(&ident_to_ident_name(&namespace.local)),
+          ) {
             Some(Value::Pointer(p)) => p,
             _ => {
               self.internal_error(
@@ -724,7 +736,7 @@ impl ModuleCompiler {
     let defn_name = match ident {
       Some(ident) => match self.scope_analysis.lookup_value(
         &OwnerId::Module, // TODO: Do we need the scope/owner_id to be passed in instead?
-        &Ident::from_swc_ident(ident),
+        &Ident::from_swc_ident(&ident_to_ident_name(ident)),
       ) {
         Some(Value::Pointer(p)) => p,
         _ => {
@@ -794,9 +806,10 @@ impl ModuleCompiler {
 
     let mut ctor = swc_ecma_ast::Constructor {
       span: class.span,
+      ctxt: swc_common::SyntaxContext::empty(),
       key: swc_ecma_ast::PropName::Str(swc_ecma_ast::Str {
         span: class.span,
-        value: swc_atoms::JsWord::from(""),
+        value: swc_atoms::Atom::from(""),
         raw: None,
       }),
       params: vec![],
@@ -854,7 +867,7 @@ impl ModuleCompiler {
 
           self.compile_fn(
             method_defn_name.clone(),
-            Functionish::Fn(method_id, method.function.clone()),
+            Functionish::Fn(method_id, method.function.as_ref().clone()),
           );
 
           let dst = match method.is_static {
@@ -881,6 +894,9 @@ impl ModuleCompiler {
         Empty(_) => {}
         StaticBlock(static_block) => {
           self.todo(static_block.span, "StaticBlock");
+        }
+        AutoAccessor(_) => {
+          self.todo(class_member.span(), "AutoAccessor");
         }
       }
     }

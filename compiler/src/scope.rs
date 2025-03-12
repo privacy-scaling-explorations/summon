@@ -27,7 +27,7 @@ impl Spanned for NameId {
 
 pub struct ScopeData {
   pub owner_id: OwnerId,
-  pub name_map: HashMap<swc_atoms::JsWord, NameId>,
+  pub name_map: HashMap<swc_atoms::Atom, NameId>,
   pub parent: Option<Rc<RefCell<ScopeData>>>,
 }
 
@@ -41,10 +41,10 @@ pub enum OwnerId {
 
 pub trait ScopeTrait {
   fn trace(&self);
-  fn get(&self, name: &swc_atoms::JsWord) -> Option<NameId>;
+  fn get(&self, name: &swc_atoms::Atom) -> Option<NameId>;
   fn set(
     &self,
-    name: &swc_atoms::JsWord,
+    name: &swc_atoms::Atom,
     name_id: NameId,
     span: swc_common::Span,
     diagnostics: &mut Vec<Diagnostic>,
@@ -71,7 +71,7 @@ impl ScopeTrait for Scope {
     };
   }
 
-  fn get(&self, name: &swc_atoms::JsWord) -> Option<NameId> {
+  fn get(&self, name: &swc_atoms::Atom) -> Option<NameId> {
     match self.borrow().name_map.get(name) {
       Some(mapped_name) => Some(mapped_name.clone()),
       None => match &self.borrow().parent {
@@ -83,7 +83,7 @@ impl ScopeTrait for Scope {
 
   fn set(
     &self,
-    name: &swc_atoms::JsWord,
+    name: &swc_atoms::Atom,
     name_id: NameId,
     span: swc_common::Span,
     diagnostics: &mut Vec<Diagnostic>,
@@ -115,7 +115,7 @@ pub fn init_std_scope() -> Scope {
 
   for name in BUILTIN_NAMES {
     name_map.insert(
-      swc_atoms::JsWord::from(name),
+      swc_atoms::Atom::from(name),
       NameId::Builtin(Builtin {
         name: name.to_string(),
       }),
@@ -123,7 +123,7 @@ pub fn init_std_scope() -> Scope {
   }
 
   for (name, _) in CONSTANTS {
-    name_map.insert(swc_atoms::JsWord::from(name), NameId::Constant(name));
+    name_map.insert(swc_atoms::Atom::from(name), NameId::Constant(name));
   }
 
   Rc::new(RefCell::new(ScopeData {

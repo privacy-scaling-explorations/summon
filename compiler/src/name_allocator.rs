@@ -44,7 +44,7 @@ impl NameAllocator {
     let mut i = 0_u64;
 
     loop {
-      let candidate = prefix.to_string() + &i.to_string();
+      let candidate = prefix.to_string() + i.to_string().as_str();
 
       if !self.used_names.contains(&candidate) {
         self.used_names.insert(candidate.clone());
