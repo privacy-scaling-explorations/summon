@@ -131,6 +131,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 
 [[package]]
+name = "bench"
+version = "0.1.0"
+dependencies = [
+ "summon_compiler",
+ "summon_vm",
+]
+
+[[package]]
 name = "better_scoped_tls"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2458,6 +2466,18 @@ name = "void"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6a02e4885ed3bc0f2de90ea6dd45ebcbb66dacffe03547fadbb0eeae2770887d"
+
+[[package]]
+name = "vstc"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "serde_qs",
+ "summon_compiler",
+ "summon_vm",
+ "url",
+]
 
 [[package]]
 name = "wasi"

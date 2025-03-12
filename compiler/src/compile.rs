@@ -1,7 +1,7 @@
 use std::{cell::RefCell, collections::BTreeMap, collections::HashMap, rc::Rc};
 
+use crate::asm::Module;
 use summon_vm::vs_value::{ToDynamicVal, Val, VsType};
-
 use summon_vm::{
   circuit::Circuit,
   circuit_builder::CircuitBuilder,
@@ -30,6 +30,11 @@ pub struct CompileErr {
 }
 
 pub type CompileResult = Result<CompileOk, CompileErr>;
+
+pub struct CompileLinkedModuleResult {
+  pub module: Option<Module>,
+  pub diagnostics: HashMap<ResolvedPath, Vec<Diagnostic>>,
+}
 
 pub fn compile<ReadFile>(path: ResolvedPath, read_file: ReadFile) -> CompileResult
 where
@@ -65,6 +70,30 @@ where
     circuit,
     diagnostics,
   })
+}
+
+pub fn compile_linked_module<ReadFile>(
+  entry_point: ResolvedPath,
+  read_file: ReadFile,
+) -> CompileLinkedModuleResult
+where
+  ReadFile: Fn(&str) -> Result<String, String>,
+{
+  let gm = gather_modules(entry_point.clone(), read_file);
+  let mut link_module_result = link_module(&gm.entry_point, &gm.modules);
+
+  let mut result = CompileLinkedModuleResult {
+    module: link_module_result.module,
+    diagnostics: gm.diagnostics,
+  };
+
+  result
+    .diagnostics
+    .entry(entry_point)
+    .or_default()
+    .append(&mut link_module_result.diagnostics);
+
+  result
 }
 
 struct CompileArtifacts {

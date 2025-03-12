@@ -1,5 +1,5 @@
 [workspace]
-members = ["cli", "compiler", "common", "vm"]
+members = ["cli", "compiler", "common", "vm", "bench", "vstc"]
 
 resolver = "2"
 

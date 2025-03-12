@@ -1,0 +1,68 @@
+00: 0d05 000a 000b 0400 210d 2300 0906 0106
+10: 0206 0300 0222 0d33 000e 0209 00ff 010e
+20: 0200 000b 0703 060e 030e 0405 040e 020e
+30: 0500 000b 0300 0201 00
+
+---
+
+// Pointers currently occupy two bytes, restricting programs to 64kB.
+// In future, the length of the bytecode may indicate the byte width needed for
+// pointers (1, 2, 4, or 8, whichever is smallest and sufficient).
+
+    // export @main  {}
+00:           0d0500 0a00 // Default export is a pointer (0d) to 0500 (position
+                          // 5, little endian)
+                          // Named exports are an empty object (0a object, 00 end)
+
+    // @main = function() {
+05:            0b  04  00 // function with 4 registers and 0 parameters
+                          //  0: %return
+                          //  1: %this
+                          //  2: %x
+                          // ff: %ignore (so only actually allocate 3 registers)
+                          // declaring the number of registers implicitly indicates
+                          // the byte width for representing registers in this
+                          // function
+
+    //   call @f1    [  1,   2,   3    ]  %x
+08:      21   0d2300 09 0601 0602 0603 00 02
+
+    //   apply @f2    %x   [  ]  %ignore
+15:      22    0d3300 0e02 09 00 ff
+
+    //   mov %x   %return
+1e:      01  0e02 00
+
+    // }
+22:    00
+
+    // @f1 = function(%a, %b, %c) {
+23:          0b  07  03 // function with 7 registers and 3 parameters
+                        //  0: %return
+                        //  1: %this
+                        //  2: %a
+                        //  3: %b
+                        //  4: %c
+                        //  5: %_tmp0
+                        // ff: %ignore
+
+    //   op* %b   %c   %_tmp0
+26:      06  0e03 0e04 05
+
+    //   op+ %a   %_tmp0 %return
+2c:      04  0e02 0e05   00
+
+    // }
+2b:    00
+
+    // @f2 = function() {
+33:          0b  03  00 // function with 3 registers and 0 parameters
+                        //  0: %return
+                        //  1: %this
+                        // ff: %ignore
+
+    //   op++ %this
+36:      02   01
+
+    // }
+38:    00

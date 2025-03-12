@@ -1,0 +1,6 @@
+export @f1 {}
+
+@f1 = function(%a, %b, %c) {
+  op* %b %c %_tmp0
+  op+ %a %_tmp0 %return
+}
