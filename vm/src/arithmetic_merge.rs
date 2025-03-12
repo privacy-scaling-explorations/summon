@@ -212,7 +212,6 @@ fn quick_val_eq(left: &Val, right: &Val) -> bool {
     (Val::Static(left), Val::Static(right)) => std::ptr::eq(&**left, &**right),
     (Val::Dynamic(left), Val::Dynamic(right)) => std::ptr::eq(&**left, &**right),
     (Val::CopyCounter(left), Val::CopyCounter(right)) => std::ptr::eq(&**left, &**right),
-    (Val::StoragePtr(left), Val::StoragePtr(right)) => std::ptr::eq(&**left, &**right),
     _ => false,
   }
 }

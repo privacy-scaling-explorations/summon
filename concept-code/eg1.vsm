@@ -1,0 +1,13 @@
+export @main {}
+@main = function() {
+  call @f1 [1, 2, 3] %x
+  apply @f2 %x [] %ignore
+  mov %x %return
+}
+@f1 = function(%a, %b, %c) {
+  op* %b %c %_tmp0
+  op+ %a %_tmp0 %return
+}
+@f2 = function() {
+  op++ %this
+}

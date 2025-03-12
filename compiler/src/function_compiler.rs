@@ -83,7 +83,7 @@ pub struct FunctionCompiler<'a> {
   pub finally_labels: Vec<Label>,
 }
 
-impl<'a> DiagnosticContainer for FunctionCompiler<'a> {
+impl DiagnosticContainer for FunctionCompiler<'_> {
   fn diagnostics_mut(&self) -> &RefCell<Vec<Diagnostic>> {
     self.mc.diagnostics_mut()
   }
@@ -542,12 +542,9 @@ impl<'a> FunctionCompiler<'a> {
         }
 
         for label_pair in self.loop_labels.iter().rev() {
-          match &label_pair.continue_ {
-            Some(continue_label) => {
-              self.push(Instruction::Jmp(continue_label.ref_()));
-              return;
-            }
-            None => {}
+          if let Some(continue_label) = &label_pair.continue_ {
+            self.push(Instruction::Jmp(continue_label.ref_()));
+            return;
           }
         }
 
@@ -993,17 +990,14 @@ impl<'a> FunctionCompiler<'a> {
   }
 
   fn for_(&mut self, for_: &swc_ecma_ast::ForStmt) {
-    match &for_.init {
-      Some(var_decl_or_expr) => match var_decl_or_expr {
-        swc_ecma_ast::VarDeclOrExpr::VarDecl(var_decl) => {
-          self.var_declaration(var_decl);
-        }
-        swc_ecma_ast::VarDeclOrExpr::Expr(expr) => {
-          self.expression(expr);
-        }
-      },
-      None => {}
-    }
+    if let Some(var_decl_or_expr) = &for_.init { match var_decl_or_expr {
+      swc_ecma_ast::VarDeclOrExpr::VarDecl(var_decl) => {
+        self.var_declaration(var_decl);
+      }
+      swc_ecma_ast::VarDeclOrExpr::Expr(expr) => {
+        self.expression(expr);
+      }
+    } }
 
     let for_test_label = Label {
       name: self.label_allocator.allocate_numbered("for_test"),
@@ -1024,31 +1018,25 @@ impl<'a> FunctionCompiler<'a> {
       break_: for_end_label.clone(),
     });
 
-    match &for_.test {
-      Some(cond) => {
-        let mut ec = ExpressionCompiler { fnc: self };
+    if let Some(cond) = &for_.test {
+      let mut ec = ExpressionCompiler { fnc: self };
 
-        let cond_reg = ec.fnc.allocate_numbered_reg("_cond");
-        ec.compile_into(cond, cond_reg.clone());
+      let cond_reg = ec.fnc.allocate_numbered_reg("_cond");
+      ec.compile_into(cond, cond_reg.clone());
 
-        self.push(Instruction::JmpIfNot(
-          Value::Register(cond_reg.clone()),
-          for_end_label.ref_(),
-        ));
+      self.push(Instruction::JmpIfNot(
+        Value::Register(cond_reg.clone()),
+        for_end_label.ref_(),
+      ));
 
-        self.release_reg(&cond_reg);
-      }
-      None => {}
+      self.release_reg(&cond_reg);
     }
 
     self.statement(&for_.body, false);
 
     self.label(for_continue_label);
 
-    match &for_.update {
-      Some(update) => self.expression(update),
-      None => {}
-    }
+    if let Some(update) = &for_.update { self.expression(update) }
 
     self.push(Instruction::Jmp(for_test_label.ref_()));
 

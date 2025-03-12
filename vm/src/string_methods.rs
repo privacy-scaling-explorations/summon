@@ -35,10 +35,10 @@ pub fn op_sub_string(string_data: &Rc<str>, subscript: &Val) -> Val {
   let method = subscript.to_string();
   let method_str = method.as_str();
 
-  return match method_str {
-    "length" => Val::Number(string_data.as_bytes().len() as f64),
+  match method_str {
+    "length" => Val::Number(string_data.len() as f64),
     _ => get_string_method(method_str),
-  };
+  }
 }
 
 pub fn get_string_method(method: &str) -> Val {
@@ -320,7 +320,7 @@ static PAD_END: NativeFunction = native_fn(|this, params| {
         _ => return Ok(Val::String(string_data.clone())),
       };
 
-      if target_length <= string_data.as_bytes().len() {
+      if target_length <= string_data.len() {
         return Ok(Val::String(string_data.clone()));
       }
 
@@ -331,15 +331,15 @@ static PAD_END: NativeFunction = native_fn(|this, params| {
         _ => " ".to_string(),
       };
 
-      let mut length_deficit = target_length - string.as_bytes().len();
+      let mut length_deficit = target_length - string.len();
 
-      let whole_copies = length_deficit / pad_string.as_bytes().len();
+      let whole_copies = length_deficit / pad_string.len();
 
       for _ in 0..whole_copies {
         string.push_str(&pad_string);
       }
 
-      length_deficit -= whole_copies * pad_string.as_bytes().len();
+      length_deficit -= whole_copies * pad_string.len();
 
       if length_deficit > 0 {
         for c in pad_string.chars() {
@@ -372,7 +372,7 @@ static PAD_START: NativeFunction = native_fn(|this, params| {
         _ => return Ok(Val::String(string_data.clone())),
       };
 
-      if target_length <= string_data.as_bytes().len() {
+      if target_length <= string_data.len() {
         return Ok(Val::String(string_data.clone()));
       }
 
@@ -381,9 +381,9 @@ static PAD_START: NativeFunction = native_fn(|this, params| {
         _ => " ".to_string(),
       };
 
-      let mut length_deficit = target_length - string_data.as_bytes().len();
+      let mut length_deficit = target_length - string_data.len();
 
-      let whole_copies = length_deficit / pad_string.as_bytes().len();
+      let whole_copies = length_deficit / pad_string.len();
 
       let mut prefix = String::new();
 
@@ -391,7 +391,7 @@ static PAD_START: NativeFunction = native_fn(|this, params| {
         prefix.push_str(&pad_string);
       }
 
-      length_deficit -= whole_copies * pad_string.as_bytes().len();
+      length_deficit -= whole_copies * pad_string.len();
 
       if length_deficit > 0 {
         for c in pad_string.chars() {
@@ -480,9 +480,9 @@ static SPLIT: NativeFunction = native_fn(|this, params| {
         // FIXME: to_index isn't quite right
         Some(l) => match l.to_index() {
           Some(i) => i,
-          None => string_data.as_bytes().len() + 1,
+          None => string_data.len() + 1,
         },
-        None => string_data.as_bytes().len() + 1,
+        None => string_data.len() + 1,
       };
 
       let mut result = Vec::<Val>::new();

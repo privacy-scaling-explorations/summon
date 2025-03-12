@@ -19,7 +19,7 @@ pub struct StructuredFormatter<'a, 'b> {
   indent_str_short: &'a str,
 }
 
-impl<'a, 'b> StructuredFormatter<'a, 'b> {
+impl StructuredFormatter<'_, '_> {
   pub fn nest<F: FnMut(&mut StructuredFormatter<'_, '_>) -> std::fmt::Result>(
     &mut self,
     mut f: F,
@@ -121,7 +121,7 @@ impl StructuredFormattable for String {
 
 pub struct Structured<'a, T>(pub &'a T);
 
-impl<'a, T: StructuredFormattable> std::fmt::Display for Structured<'a, T> {
+impl<T: StructuredFormattable> std::fmt::Display for Structured<'_, T> {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     StructuredFormatter {
       f,
@@ -713,7 +713,7 @@ impl StructuredFormattable for Value {
 
 struct MultilineValue<'a>(&'a Value);
 
-impl<'a> StructuredFormattable for MultilineValue<'a> {
+impl StructuredFormattable for MultilineValue<'_> {
   fn structured_fmt(&self, sf: &mut StructuredFormatter<'_, '_>) -> std::fmt::Result {
     match self.0 {
       Value::Array(array) => {

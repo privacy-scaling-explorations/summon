@@ -3,20 +3,18 @@ name = "summon_compiler"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-summon_vm = { path = "../vm" }
-summon_common = { path = "../common" }
-num-bigint = "0.4"
-num-traits = "0.2"
-queues = "1.0.2"
-serde = "1.0"
-serde_json = "1.0"
-swc_common = { version = "0.17.22", features=["tty-emitter"] }
-swc_ecma_parser = "0.102.2"
-swc = "0.168.3"
-swc_atoms = "0.2"
-swc_ecma_ast = "0.76.0"
-bristol-circuit = { git = "https://github.com/voltrevo/bristol-circuit", rev = "288847c" }
-tiny-keccak = { version = "2.0", features = ["keccak"] }
+summon_vm = { workspace = true }
+summon_common = { workspace = true }
+num-bigint = { workspace = true }
+num-traits = { workspace = true }
+queues = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+swc_common = { workspace = true }
+swc_ecma_parser = { workspace = true }
+swc = { workspace = true }
+swc_atoms = { workspace = true }
+swc_ecma_ast = { workspace = true }
+bristol-circuit = { workspace = true }
+tiny-keccak = { workspace = true }

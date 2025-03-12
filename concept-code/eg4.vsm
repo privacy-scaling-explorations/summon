@@ -1,0 +1,23 @@
+export @main {}
+@main = function() {
+  mov @Counter %Counter
+  sub %Counter "prototype" %_tmp0
+  submov "inc" @_anon0 %_tmp0
+  submov "prototype" %_tmp0 %Counter
+  new %Counter [] %counter
+  subcall %counter "inc" [] %ignore
+  subcall %counter "inc" [] %ignore
+  mov %counter %counter2
+  subcall %counter "inc" [] %ignore
+  sub %counter "value" %_tmp0
+  sub %counter2 "value" %_tmp1
+  mov [%_tmp0 %_tmp1] %return
+}
+@Counter = function() {
+  submov "value" 0 %this
+}
+@_anon0 = function() {
+  sub %this "value" %_tmp0
+  op++ %_tmp0
+  submov "value" %_tmp0 %this
+}

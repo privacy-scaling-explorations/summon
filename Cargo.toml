@@ -1,4 +1,28 @@
 [workspace]
-members = ["cli", "compiler", "common", "vm", "storage"]
+members = ["cli", "compiler", "common", "vm", "bench", "vstc"]
 
 resolver = "2"
+
+[workspace.dependencies]
+bincode = "2"
+boolify = { git = "https://github.com/voltrevo/boolify", rev = "c18faf5" }
+bristol-circuit = { git = "https://github.com/voltrevo/bristol-circuit", rev = "288847c" }
+num-bigint = "0.4"
+num-derive = "0.4"
+num-traits = "0.2"
+queues = "1.0.2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1.0"
+serde_qs = "0.14.0"
+swc = "0.168.3"
+swc_atoms = "0.2"
+swc_common = { version = "0.17.22", features = ["tty-emitter"] }
+swc_ecma_ast = "0.76.0"
+swc_ecma_parser = "0.102.2"
+strum = "0.27.1"
+strum_macros = "0.27.1"
+tiny-keccak = { version = "2.0", features = ["keccak"] }
+url = "2"
+summon_compiler = { path = "compiler" }
+summon_vm = { path = "vm" }
+summon_common = { path = "common" }

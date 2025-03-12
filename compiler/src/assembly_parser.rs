@@ -15,7 +15,7 @@ pub struct AssemblyParser<'a> {
   pub pos: std::iter::Peekable<std::str::Chars<'a>>,
 }
 
-impl<'a> AssemblyParser<'a> {
+impl AssemblyParser<'_> {
   fn module(&mut self) -> Module {
     self.parse_exact("export");
     self.parse_whitespace();
@@ -83,7 +83,7 @@ impl<'a> AssemblyParser<'a> {
   }
 
   fn get_lines(&self) -> Vec<&str> {
-    return self.content.split('\n').collect();
+    self.content.split('\n').collect()
   }
 
   fn render_pos(&self, offset: isize, message: &str) -> String {
@@ -1090,6 +1090,7 @@ impl<'a> AssemblyParser<'a> {
     loop {
       self.parse_optional_whitespace();
 
+      #[allow(clippy::comparison_to_empty)]
       if self.parse_one_of(&["include ", ""]) == "" {
         break;
       }

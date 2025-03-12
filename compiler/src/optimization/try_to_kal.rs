@@ -65,7 +65,6 @@ impl TryToKal for Val {
       | Val::Static(..)
       | Val::Dynamic(..)
       | Val::CopyCounter(..) => return None,
-      Val::StoragePtr(ptr) => return ptr.get().try_to_kal(),
     })
   }
 }

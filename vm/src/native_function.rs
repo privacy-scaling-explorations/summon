@@ -20,19 +20,12 @@ impl<'a> ThisWrapper<'a> {
   }
 
   pub fn get(&self) -> Val {
-    match &self.this {
-      Val::StoragePtr(ptr) => ptr.get(),
-      _ => self.this.clone(),
-    }
+    self.this.clone()
   }
 
   pub fn get_mut(&mut self) -> Result<&mut Val, Val> {
     if self.const_ {
       return Err("Cannot mutate this because it is const".to_type_error());
-    }
-
-    if let Val::StoragePtr(ptr) = &self.this {
-      *self.this = ptr.get()
     }
 
     Ok(self.this)

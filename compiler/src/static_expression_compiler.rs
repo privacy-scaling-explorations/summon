@@ -17,7 +17,7 @@ pub struct StaticExpressionCompiler<'a> {
   pub mc: &'a mut ModuleCompiler,
 }
 
-impl<'a> DiagnosticContainer for StaticExpressionCompiler<'a> {
+impl DiagnosticContainer for StaticExpressionCompiler<'_> {
   fn diagnostics_mut(&self) -> &RefCell<Vec<Diagnostic>> {
     self.mc.diagnostics_mut()
   }
@@ -145,7 +145,7 @@ impl<'a> StaticExpressionCompiler<'a> {
           .constants_map
           .get(&p)
           .cloned()
-          .unwrap_or_else(|| Value::Pointer(p)),
+          .unwrap_or(Value::Pointer(p)),
         Some(value) => value,
         None => {
           self.internal_error(ident.span, "Identifier not found");
