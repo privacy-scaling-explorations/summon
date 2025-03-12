@@ -1730,8 +1730,8 @@ impl ScopeAnalysis {
         self.insert_reg_name(scope, NameType::Param, &ident.id, None);
       }
       Pat::Array(array_pat) => {
-        for elem in &array_pat.elems {
-          if let Some(pat) = elem { self.param_pat(scope, pat) }
+        for pat in array_pat.elems.iter().flatten() {
+          self.param_pat(scope, pat);
         }
       }
       Pat::Rest(rest_pat) => {
