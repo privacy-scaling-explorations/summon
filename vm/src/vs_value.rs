@@ -19,7 +19,6 @@ use crate::vs_array::VsArray;
 use crate::vs_class::VsClass;
 use crate::vs_function::VsFunction;
 use crate::vs_object::VsObject;
-use crate::vs_storage_ptr::VsStoragePtr;
 use crate::vs_symbol::{symbol_to_name, VsSymbol};
 
 #[derive(Clone, Debug, Default)]
@@ -40,7 +39,6 @@ pub enum Val {
   Static(&'static dyn ValTrait),
   Dynamic(Rc<dyn DynValTrait>),
   CopyCounter(Box<CopyCounter>),
-  StoragePtr(Rc<VsStoragePtr>),
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -258,14 +256,6 @@ impl Val {
       Val::Static(_) => None,
       Val::Dynamic(_) => None,
       Val::CopyCounter(_) => None,
-      Val::StoragePtr(ptr) => ptr.get().to_json(),
-    }
-  }
-
-  pub fn not_ptr(&self) -> Val {
-    match self {
-      Val::StoragePtr(ptr) => ptr.get(),
-      _ => self.clone(),
     }
   }
 }
@@ -290,7 +280,6 @@ impl ValTrait for Val {
       Static(val) => val.typeof_(),
       Dynamic(val) => val.typeof_(),
       CopyCounter(_) => VsType::Object,
-      StoragePtr(ptr) => ptr.get().typeof_(),
     }
   }
 
@@ -317,7 +306,6 @@ impl ValTrait for Val {
       Static(val) => val.to_number(),
       Dynamic(val) => val.to_number(),
       CopyCounter(_) => f64::NAN,
-      StoragePtr(ptr) => ptr.get().to_number(),
     }
   }
 
@@ -343,7 +331,6 @@ impl ValTrait for Val {
       Static(val) => val.to_index(),
       Dynamic(val) => val.to_index(),
       CopyCounter(_) => None,
-      StoragePtr(ptr) => ptr.get().to_index(),
     }
   }
 
@@ -366,7 +353,6 @@ impl ValTrait for Val {
       Static(val) => val.is_primitive(), // TODO: false?
       Dynamic(val) => val.is_primitive(),
       CopyCounter(_) => false,
-      StoragePtr(ptr) => ptr.get().is_primitive(),
     }
   }
 
@@ -389,7 +375,6 @@ impl ValTrait for Val {
       Static(val) => val.is_truthy(), // TODO: true?
       Dynamic(val) => val.is_truthy(),
       CopyCounter(_) => true,
-      StoragePtr(ptr) => ptr.get().is_truthy(),
     }
   }
 
@@ -412,7 +397,6 @@ impl ValTrait for Val {
       Static(_) => false,
       Dynamic(val) => val.is_nullish(),
       CopyCounter(_) => false,
-      StoragePtr(ptr) => ptr.get().is_nullish(),
     }
   }
 
@@ -447,7 +431,6 @@ impl ValTrait for Val {
     match self {
       Array(a) => Some(a.clone()),
       Dynamic(val) => val.as_array_data(),
-      StoragePtr(ptr) => ptr.get().as_array_data(),
 
       _ => None,
     }
@@ -460,7 +443,6 @@ impl ValTrait for Val {
       Class(class) => Some(class.clone()),
       Static(s) => s.as_class_data(),
       Dynamic(val) => val.as_class_data(),
-      StoragePtr(ptr) => ptr.get().as_class_data(),
 
       _ => None,
     }
@@ -473,7 +455,6 @@ impl ValTrait for Val {
       Function(f) => LoadFunctionResult::StackFrame(f.make_frame()),
       Static(s) => s.load_function(),
       Dynamic(val) => val.load_function(),
-      StoragePtr(ptr) => ptr.get().load_function(),
 
       _ => LoadFunctionResult::NotAFunction,
     }
@@ -566,7 +547,6 @@ impl ValTrait for Val {
       Val::Static(static_) => static_.has(key),
       Val::Dynamic(dynamic) => dynamic.has(key),
       Val::CopyCounter(_) => Some(matches!(key.to_string().as_str(), "tag" | "count")),
-      Val::StoragePtr(ptr) => ptr.get().has(key),
     }
   }
 
@@ -588,8 +568,7 @@ impl ValTrait for Val {
       | Val::Object(_)
       | Val::Function(_)
       | Val::Class(_)
-      | Val::CopyCounter(_)
-      | Val::StoragePtr(_) => None,
+      | Val::CopyCounter(_) => None,
       Val::Static(static_) => static_.override_binary_op(op, left, right),
       Val::Dynamic(dynamic) => dynamic.override_binary_op(op, left, right),
     }
@@ -609,8 +588,7 @@ impl ValTrait for Val {
       | Val::Object(_)
       | Val::Function(_)
       | Val::Class(_)
-      | Val::CopyCounter(_)
-      | Val::StoragePtr(_) => None,
+      | Val::CopyCounter(_) => None,
       Val::Static(static_) => static_.override_unary_op(op, input),
       Val::Dynamic(dynamic) => dynamic.override_unary_op(op, input),
     }
@@ -693,7 +671,6 @@ impl ValTrait for Val {
         cc.tag.codify(),
         cc.count.borrow()
       ),
-      Val::StoragePtr(_) => todo!(),
     }
   }
 }
@@ -755,7 +732,6 @@ impl fmt::Display for Val {
         cc.tag,
         (*cc.count.borrow() as f64).to_val()
       ),
-      StoragePtr(ptr) => ptr.get().fmt(f),
     }
   }
 }
@@ -924,8 +900,6 @@ impl<'a> std::fmt::Display for PrettyVal<'a> {
         cc.tag.pretty(),
         (*cc.count.borrow() as f64).to_val().pretty()
       ),
-
-      Val::StoragePtr(ptr) => ptr.get().pretty_fmt(f),
     }
   }
 }

@@ -55,17 +55,13 @@ static IS_ARRAY: NativeFunction = native_fn(|_this, params| {
 });
 
 static FROM: NativeFunction = native_fn(|_this, params| {
-  let mut first_param = match params.first() {
+  let first_param = match params.first() {
     None => return Err("undefined is not iterable".to_type_error()),
     Some(p) => p.clone(),
   };
 
   if params.len() > 1 {
     return Err("TODO: Using Array.from with a map function".to_internal_error());
-  }
-
-  if let Val::StoragePtr(ptr) = first_param {
-    first_param = ptr.get();
   }
 
   Ok(match first_param {
@@ -107,9 +103,6 @@ static FROM: NativeFunction = native_fn(|_this, params| {
       }
 
       VsArray::from(arr).to_val()
-    }
-    Val::StoragePtr(_) => {
-      panic!("Shouldn't be possible") // prevented this just above the match
     }
   })
 });

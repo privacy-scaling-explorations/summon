@@ -32,12 +32,10 @@ mod string_methods;
 mod todo_fn;
 pub mod unary_op;
 pub mod val_dynamic_downcast;
-mod val_storage;
 pub mod vs_array;
 pub mod vs_class;
 mod vs_function;
 pub mod vs_object;
-mod vs_storage_ptr;
 mod vs_symbol;
 pub mod vs_value;
 

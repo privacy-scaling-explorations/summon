@@ -127,7 +127,7 @@ impl fmt::Display for JsxElement {
       write!(f, ">")?;
 
       for child in &self.children {
-        match child.not_ptr() {
+        match child {
           Val::Void | Val::Undefined | Val::Null => {}
           Val::Array(arr) => {
             for val in &arr.elements {
@@ -176,7 +176,6 @@ fn write_attributes(
 pub fn is_jsx_element(val: &Val) -> bool {
   match val {
     Val::Dynamic(dynamic) => dynamic.as_any().is::<JsxElement>(),
-    Val::StoragePtr(ptr) => is_jsx_element(&ptr.get()),
     _ => false,
   }
 }

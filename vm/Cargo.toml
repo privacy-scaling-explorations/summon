@@ -3,13 +3,10 @@ name = "summon_vm"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-num-bigint = "0.4"
-num-traits = "0.2"
-summon_common = { path = "../common" }
-bristol-circuit = { git = "https://github.com/voltrevo/bristol-circuit", rev = "288847c" }
-storage = { path = "../storage" }
-num-derive = "0.4.1"
-serde_json = "1.0"
+num-bigint = { workspace = true }
+num-traits = { workspace = true }
+summon_common = { workspace = true }
+bristol-circuit = { workspace = true }
+num-derive = { workspace = true }
+serde_json = { workspace = true }

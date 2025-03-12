@@ -1,9 +1,7 @@
 use std::{cell::RefCell, collections::HashMap, fmt, ops::Index, rc::Rc, slice::SliceIndex};
 
-use storage::{GenericError, StorageBackend, StorageEntity, StorageReader, StorageTxMut};
-
-use crate::vs_value::Val;
 use crate::bytecode_decoder::BytecodeDecoder;
+use crate::vs_value::Val;
 
 pub struct Bytecode {
   pub code: Vec<u8>,
@@ -43,25 +41,5 @@ impl DecoderMaker for Rc<Bytecode> {
       bytecode: self.clone(),
       pos,
     }
-  }
-}
-
-impl<SB: StorageBackend> StorageEntity<SB> for Bytecode {
-  fn to_storage_entry<TxMut: StorageTxMut<SB>>(
-    &self,
-    _tx: &mut TxMut,
-  ) -> Result<storage::StorageEntry, GenericError> {
-    Ok(storage::StorageEntry {
-      ref_count: 1,
-      refs: vec![],
-      data: self.code.clone(),
-    })
-  }
-
-  fn from_storage_entry<Tx: StorageReader<SB>>(
-    _tx: &Tx,
-    entry: storage::StorageEntry,
-  ) -> Result<Self, GenericError> {
-    Ok(Bytecode::new(entry.data))
   }
 }
