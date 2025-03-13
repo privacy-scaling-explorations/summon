@@ -6,6 +6,7 @@ use crate::{
   expression_compiler::{CompiledExpression, ExpressionCompiler},
   function_compiler::ident_to_ident_name,
   ident::Ident as CrateIdent,
+  util::expr_from_simple_assign_target,
 };
 use swc_common::Spanned;
 
@@ -61,37 +62,11 @@ impl TargetAccessor {
     simple_assign_target: &swc_ecma_ast::SimpleAssignTarget,
     is_outermost: bool,
   ) -> TargetAccessor {
-    use swc_ecma_ast::Expr;
-
-    let expr: Expr = match simple_assign_target {
-      swc_ecma_ast::SimpleAssignTarget::Ident(binding_ident) => {
-        Expr::Ident(binding_ident.id.clone())
-      }
-      swc_ecma_ast::SimpleAssignTarget::Member(member_expr) => Expr::Member(member_expr.clone()),
-      swc_ecma_ast::SimpleAssignTarget::SuperProp(super_prop_expr) => {
-        Expr::SuperProp(super_prop_expr.clone())
-      }
-      swc_ecma_ast::SimpleAssignTarget::Paren(paren_expr) => Expr::Paren(paren_expr.clone()),
-      swc_ecma_ast::SimpleAssignTarget::OptChain(opt_chain_expr) => {
-        Expr::OptChain(opt_chain_expr.clone())
-      }
-      swc_ecma_ast::SimpleAssignTarget::TsAs(ts_as_expr) => Expr::TsAs(ts_as_expr.clone()),
-      swc_ecma_ast::SimpleAssignTarget::TsSatisfies(ts_satisfies_expr) => {
-        Expr::TsSatisfies(ts_satisfies_expr.clone())
-      }
-      swc_ecma_ast::SimpleAssignTarget::TsNonNull(ts_non_null_expr) => {
-        Expr::TsNonNull(ts_non_null_expr.clone())
-      }
-      swc_ecma_ast::SimpleAssignTarget::TsTypeAssertion(ts_type_assertion) => {
-        Expr::TsTypeAssertion(ts_type_assertion.clone())
-      }
-      swc_ecma_ast::SimpleAssignTarget::TsInstantiation(ts_instantiation) => {
-        Expr::TsInstantiation(ts_instantiation.clone())
-      }
-      swc_ecma_ast::SimpleAssignTarget::Invalid(invalid) => Expr::Invalid(invalid.clone()),
-    };
-
-    TargetAccessor::compile(ec, &expr, is_outermost)
+    TargetAccessor::compile(
+      ec,
+      &expr_from_simple_assign_target(simple_assign_target),
+      is_outermost,
+    )
   }
 
   pub fn compile(

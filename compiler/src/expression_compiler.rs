@@ -397,15 +397,12 @@ impl ExpressionCompiler<'_, '_> {
     target_register: Option<Register>,
   ) -> CompiledExpression {
     let mut at = match &assign_expr.left {
-      swc_ecma_ast::PatOrExpr::Pat(pat) => match &**pat {
-        swc_ecma_ast::Pat::Ident(ident) => TargetAccessor::compile_ident(
-          self,
-          &CrateIdent::from_swc_ident(&ident_to_ident_name(&ident.id)),
-        ),
-        swc_ecma_ast::Pat::Expr(expr) => TargetAccessor::compile(self, expr.as_ref(), true),
-        _ => return self.assign_pat_eq(pat, &assign_expr.right, target_register),
-      },
-      swc_ecma_ast::PatOrExpr::Expr(expr) => TargetAccessor::compile(self, expr, true),
+      swc_ecma_ast::AssignTarget::Simple(simple_assign_target) => {
+        TargetAccessor::compile_simple_assign_target(self, simple_assign_target, true)
+      }
+      swc_ecma_ast::AssignTarget::Pat(assign_target_pat) => {
+        return self.assign_pat_eq(assign_target_pat, &assign_expr.right, target_register);
+      }
     };
 
     let rhs = match is_top_level {
@@ -433,7 +430,7 @@ impl ExpressionCompiler<'_, '_> {
 
   pub fn assign_pat_eq(
     &mut self,
-    pat: &swc_ecma_ast::Pat,
+    pat: &swc_ecma_ast::AssignTargetPat,
     assign_expr_right: &swc_ecma_ast::Expr,
     target_register: Option<Register>,
   ) -> CompiledExpression {
@@ -450,7 +447,21 @@ impl ExpressionCompiler<'_, '_> {
 
     self.compile_into(assign_expr_right, rhs_reg.clone());
 
-    self.pat(pat, &rhs_reg, true);
+    self.pat(
+      &match pat {
+        swc_ecma_ast::AssignTargetPat::Array(array_pat) => {
+          swc_ecma_ast::Pat::Array(array_pat.clone())
+        }
+        swc_ecma_ast::AssignTargetPat::Object(object_pat) => {
+          swc_ecma_ast::Pat::Object(object_pat.clone())
+        }
+        swc_ecma_ast::AssignTargetPat::Invalid(invalid) => {
+          swc_ecma_ast::Pat::Invalid(invalid.clone())
+        }
+      },
+      &rhs_reg,
+      true,
+    );
 
     CompiledExpression::new(Value::Register(rhs_reg), nested_registers)
   }

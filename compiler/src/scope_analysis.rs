@@ -15,6 +15,7 @@ use crate::{
   ident::Ident,
   name_allocator::{PointerAllocator, RegAllocator},
   scope::{init_std_scope, NameId, OwnerId, Scope, ScopeTrait},
+  util::{expr_from_simple_assign_target, pat_from_assign_target_pat},
 };
 
 use super::diagnostic::Diagnostic;
@@ -1109,13 +1110,15 @@ impl ScopeAnalysis {
       }
       Expr::Assign(assign) => {
         match &assign.left {
-          swc_ecma_ast::PatOrExpr::Pat(pat) => {
-            self.pat(scope, pat);
-            self.mutate_pat(scope, pat);
+          swc_ecma_ast::AssignTarget::Pat(assign_target_pat) => {
+            let pat = pat_from_assign_target_pat(assign_target_pat);
+            self.pat(scope, &pat);
+            self.mutate_pat(scope, &pat);
           }
-          swc_ecma_ast::PatOrExpr::Expr(expr) => {
-            self.expr(scope, expr);
-            self.mutate_expr(scope, expr, false);
+          swc_ecma_ast::AssignTarget::Simple(simple_assign_target) => {
+            let expr = expr_from_simple_assign_target(simple_assign_target);
+            self.expr(scope, &expr);
+            self.mutate_expr(scope, &expr, false);
           }
         }
 
