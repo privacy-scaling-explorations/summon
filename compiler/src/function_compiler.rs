@@ -17,6 +17,7 @@ use crate::name_allocator::{NameAllocator, RegAllocator};
 use crate::scope::{NameId, OwnerId};
 use crate::scope_analysis::{fn_to_owner_id, Name};
 use crate::src_hash::src_hash;
+use crate::util::ident_name_from_ident;
 
 #[derive(Clone, Debug)]
 pub enum Functionish {
@@ -351,7 +352,7 @@ impl<'a> FunctionCompiler<'a> {
                   match ident.id.sym.to_string().as_str() {
                     "this" => None,
                     _ => Some(self.get_variable_register(&Ident::from_swc_ident(
-                      &ident_to_ident_name(&ident.id),
+                      &ident_name_from_ident(&ident.id),
                     ))),
                   }
                 }
@@ -379,7 +380,7 @@ impl<'a> FunctionCompiler<'a> {
     Some(match param_pat {
       Pat::Ident(ident) => match ident.id.sym.to_string().as_str() {
         "this" => return None,
-        _ => self.get_variable_register(&Ident::from_swc_ident(&ident_to_ident_name(&ident.id))),
+        _ => self.get_variable_register(&Ident::from_swc_ident(&ident_name_from_ident(&ident.id))),
       },
       Pat::Assign(assign) => return self.get_pattern_register_opt(&assign.left),
       Pat::Array(_) => self.allocate_numbered_reg("_array_pat"),
@@ -1146,7 +1147,7 @@ impl<'a> FunctionCompiler<'a> {
       }
       Fn(fn_decl) => {
         let p =
-          match self.lookup_value(&Ident::from_swc_ident(&ident_to_ident_name(&fn_decl.ident))) {
+          match self.lookup_value(&Ident::from_swc_ident(&ident_name_from_ident(&fn_decl.ident))) {
             Some(Value::Pointer(p)) => p,
             _ => {
               self.internal_error(
@@ -1154,7 +1155,7 @@ impl<'a> FunctionCompiler<'a> {
                 &format!(
                   "Lookup of function {} was not a pointer, lookup_result: {:?}",
                   fn_decl.ident.sym,
-                  self.lookup_value(&Ident::from_swc_ident(&ident_to_ident_name(&fn_decl.ident)))
+                  self.lookup_value(&Ident::from_swc_ident(&ident_name_from_ident(&fn_decl.ident)))
                 ),
               );
 
@@ -1165,7 +1166,7 @@ impl<'a> FunctionCompiler<'a> {
         FunctionCompiler::new(self.mc).compile(
           p,
           Functionish::Fn(
-            Some(ident_to_ident_name(&fn_decl.ident)),
+            Some(ident_name_from_ident(&fn_decl.ident)),
             fn_decl.function.as_ref().clone(),
           ),
         );
@@ -1176,7 +1177,7 @@ impl<'a> FunctionCompiler<'a> {
       TsEnum(ts_enum) => {
         let pointer = match self.mc.scope_analysis.lookup_value(
           &OwnerId::Module,
-          &Ident::from_swc_ident(&ident_to_ident_name(&ts_enum.id)),
+          &Ident::from_swc_ident(&ident_name_from_ident(&ts_enum.id)),
         ) {
           Some(Value::Pointer(p)) => p,
           _ => {
@@ -1297,11 +1298,4 @@ fn instruction_needs_mutable_this(
   });
 
   result
-}
-
-pub fn ident_to_ident_name(ident: &swc_ecma_ast::Ident) -> swc_ecma_ast::IdentName {
-  swc_ecma_ast::IdentName {
-    sym: ident.sym.clone(),
-    span: ident.span,
-  }
 }

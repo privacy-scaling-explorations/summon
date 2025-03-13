@@ -4,9 +4,8 @@ use crate::{
   asm::{Instruction, Register, Value},
   diagnostic::DiagnosticReporter,
   expression_compiler::{CompiledExpression, ExpressionCompiler},
-  function_compiler::ident_to_ident_name,
   ident::Ident as CrateIdent,
-  util::expr_from_simple_assign_target,
+  util::{expr_from_simple_assign_target, ident_name_from_ident},
 };
 use swc_common::Spanned;
 
@@ -27,11 +26,9 @@ impl TargetAccessor {
 
     match expr {
       Ident(ident) => {
-        match ec
-          .fnc
-          .lookup(&crate::ident::Ident::from_swc_ident(&ident_to_ident_name(
-            ident,
-          ))) {
+        match ec.fnc.lookup(&crate::ident::Ident::from_swc_ident(
+          &ident_name_from_ident(ident),
+        )) {
           Some(name) => !name.effectively_const,
           _ => false, // TODO: InternalError?
         }
@@ -77,9 +74,10 @@ impl TargetAccessor {
     use swc_ecma_ast::Expr::*;
 
     match expr {
-      Ident(ident) => {
-        TargetAccessor::compile_ident(ec, &CrateIdent::from_swc_ident(&ident_to_ident_name(ident)))
-      }
+      Ident(ident) => TargetAccessor::compile_ident(
+        ec,
+        &CrateIdent::from_swc_ident(&ident_name_from_ident(ident)),
+      ),
       This(this) => TargetAccessor::compile_ident(ec, &CrateIdent::this(this.span)),
       Member(member) => {
         let obj = TargetAccessor::compile(ec, &member.obj, false);

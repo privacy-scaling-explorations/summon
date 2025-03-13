@@ -5,12 +5,13 @@ use swc_common::Spanned;
 
 use crate::asm::{Array, Instruction, Label, Number, Object, Register, Structured, Value};
 use crate::diagnostic::{Diagnostic, DiagnosticContainer, DiagnosticReporter};
-use crate::function_compiler::{ident_to_ident_name, FunctionCompiler, Functionish};
+use crate::function_compiler::{FunctionCompiler, Functionish};
 use crate::get_span_text::get_span_text;
 use crate::ident::Ident as CrateIdent;
 use crate::scope::{NameId, OwnerId};
 use crate::scope_analysis::{fn_to_owner_id, NameType};
 use crate::target_accessor::TargetAccessor;
+use crate::util::ident_name_from_ident;
 
 #[derive(Debug, Default)]
 pub struct CompiledExpression {
@@ -130,7 +131,7 @@ impl ExpressionCompiler<'_, '_> {
         self.compile(seq_exp.exprs.last().unwrap(), target_register)
       }
       Ident(ident) => self.ident(
-        &CrateIdent::from_swc_ident(&ident_to_ident_name(ident)),
+        &CrateIdent::from_swc_ident(&ident_name_from_ident(ident)),
         target_register,
       ),
       Lit(lit) => self.compile_literal(lit).to_ce(),
@@ -455,9 +456,7 @@ impl ExpressionCompiler<'_, '_> {
         swc_ecma_ast::AssignTargetPat::Object(object_pat) => {
           swc_ecma_ast::Pat::Object(object_pat.clone())
         }
-        swc_ecma_ast::AssignTargetPat::Invalid(invalid) => {
-          swc_ecma_ast::Pat::Invalid(invalid.clone())
-        }
+        swc_ecma_ast::AssignTargetPat::Invalid(invalid) => swc_ecma_ast::Pat::Invalid(*invalid),
       },
       &rhs_reg,
       true,
@@ -557,7 +556,7 @@ impl ExpressionCompiler<'_, '_> {
             let prop_key = Value::String(ident.sym.to_string());
 
             let mut compiled_value = self.ident(
-              &CrateIdent::from_swc_ident(&ident_to_ident_name(ident)),
+              &CrateIdent::from_swc_ident(&ident_name_from_ident(ident)),
               None,
             );
             sub_nested_registers.append(&mut compiled_value.nested_registers);
@@ -1036,14 +1035,14 @@ impl ExpressionCompiler<'_, '_> {
       .mc
       .scope_analysis
       .get_register_captures(&fn_to_owner_id(
-        fn_.ident.as_ref().map(ident_to_ident_name).as_ref(),
+        fn_.ident.as_ref().map(ident_name_from_ident).as_ref(),
         &fn_.function,
       ));
 
     FunctionCompiler::new(self.fnc.mc).compile(
       definition_pointer.clone(),
       Functionish::Fn(
-        fn_.ident.as_ref().map(ident_to_ident_name),
+        fn_.ident.as_ref().map(ident_name_from_ident),
         fn_.function.as_ref().clone(),
       ),
     );
@@ -1603,12 +1602,9 @@ impl ExpressionCompiler<'_, '_> {
             }
             ObjectPatProp::Assign(assign) => {
               let key = assign.key.sym.to_string();
-              let reg =
-                self
-                  .fnc
-                  .get_variable_register(&CrateIdent::from_swc_ident(&ident_to_ident_name(
-                    &assign.key,
-                  )));
+              let reg = self.fnc.get_variable_register(&CrateIdent::from_swc_ident(
+                &ident_name_from_ident(&assign.key),
+              ));
 
               self.fnc.push(Instruction::Sub(
                 Value::Register(register.clone()),

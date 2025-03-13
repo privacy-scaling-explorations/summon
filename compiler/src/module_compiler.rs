@@ -13,13 +13,14 @@ use crate::asm::{
 };
 use crate::diagnostic::{Diagnostic, DiagnosticContainer, DiagnosticReporter};
 use crate::expression_compiler::{CompiledExpression, ExpressionCompiler};
-use crate::function_compiler::{ident_to_ident_name, FunctionCompiler, Functionish};
+use crate::function_compiler::{FunctionCompiler, Functionish};
 use crate::ident::Ident;
 use crate::name_allocator::{ident_from_str, NameAllocator};
 use crate::scope::OwnerId;
 use crate::scope_analysis::{class_to_owner_id, ScopeAnalysis};
 use crate::src_hash::src_hash;
 use crate::static_expression_compiler::StaticExpressionCompiler;
+use crate::util::ident_name_from_ident;
 
 struct DiagnosticCollector {
   diagnostics: Arc<Mutex<Vec<Diagnostic>>>,
@@ -274,7 +275,7 @@ impl ModuleCompiler {
 
         let pointer = match self
           .scope_analysis
-          .lookup(&Ident::from_swc_ident(&ident_to_ident_name(ident)))
+          .lookup(&Ident::from_swc_ident(&ident_name_from_ident(ident)))
         {
           Some(name) => match &name.value {
             Value::Pointer(p) => p.clone(),
@@ -311,7 +312,7 @@ impl ModuleCompiler {
 
     let pointer = match self.scope_analysis.lookup_value(
       &OwnerId::Module,
-      &Ident::from_swc_ident(&ident_to_ident_name(&fn_.ident)),
+      &Ident::from_swc_ident(&ident_name_from_ident(&fn_.ident)),
     ) {
       Some(Value::Pointer(p)) => p,
       _ => {
@@ -334,7 +335,7 @@ impl ModuleCompiler {
     self.compile_fn(
       pointer,
       Functionish::Fn(
-        Some(ident_to_ident_name(&fn_.ident)),
+        Some(ident_name_from_ident(&fn_.ident)),
         fn_.function.as_ref().clone(),
       ),
     );
@@ -343,7 +344,7 @@ impl ModuleCompiler {
   fn compile_enum_decl(&mut self, export: bool, ts_enum: &swc_ecma_ast::TsEnumDecl) {
     let pointer = match self.scope_analysis.lookup_value(
       &OwnerId::Module,
-      &Ident::from_swc_ident(&ident_to_ident_name(&ts_enum.id)),
+      &Ident::from_swc_ident(&ident_name_from_ident(&ts_enum.id)),
     ) {
       Some(Value::Pointer(p)) => p,
       _ => {
@@ -383,7 +384,7 @@ impl ModuleCompiler {
         let defn = match &fn_.ident {
           Some(ident) => match self.scope_analysis.lookup_value(
             &OwnerId::Module,
-            &Ident::from_swc_ident(&ident_to_ident_name(ident)),
+            &Ident::from_swc_ident(&ident_name_from_ident(ident)),
           ) {
             Some(Value::Pointer(p)) => p,
             _ => {
@@ -403,7 +404,7 @@ impl ModuleCompiler {
         self.compile_fn(
           defn,
           Functionish::Fn(
-            fn_.ident.as_ref().map(ident_to_ident_name),
+            fn_.ident.as_ref().map(ident_name_from_ident),
             fn_.function.as_ref().clone(),
           ),
         );
@@ -473,7 +474,7 @@ impl ModuleCompiler {
               self.module.definitions.push(Definition {
                 pointer: defn.clone(),
                 content: DefinitionContent::Lazy(Lazy {
-                  body: match orig_name.sym.to_string() == "default" {
+                  body: match orig_name.sym == "default" {
                     true => vec![FnLine::Instruction(Instruction::Import(
                       Value::String(src.value.to_string()),
                       Register::return_(),
@@ -497,7 +498,7 @@ impl ModuleCompiler {
             }
             None => match self.scope_analysis.lookup_value(
               &OwnerId::Module,
-              &Ident::from_swc_ident(&ident_to_ident_name(orig_name)),
+              &Ident::from_swc_ident(&ident_name_from_ident(orig_name)),
             ) {
               Some(Value::Pointer(p)) => Some(p),
               lookup_result => {
@@ -629,7 +630,7 @@ impl ModuleCompiler {
 
           let pointer = match self.scope_analysis.lookup_value(
             &OwnerId::Module,
-            &Ident::from_swc_ident(&ident_to_ident_name(&named.local)),
+            &Ident::from_swc_ident(&ident_name_from_ident(&named.local)),
           ) {
             Some(Value::Pointer(p)) => p,
             _ => {
@@ -664,7 +665,7 @@ impl ModuleCompiler {
 
           let pointer = match self.scope_analysis.lookup_value(
             &OwnerId::Module,
-            &Ident::from_swc_ident(&ident_to_ident_name(&default.local)),
+            &Ident::from_swc_ident(&ident_name_from_ident(&default.local)),
           ) {
             Some(Value::Pointer(p)) => p,
             _ => {
@@ -692,7 +693,7 @@ impl ModuleCompiler {
 
           let pointer = match self.scope_analysis.lookup_value(
             &OwnerId::Module,
-            &Ident::from_swc_ident(&ident_to_ident_name(&namespace.local)),
+            &Ident::from_swc_ident(&ident_name_from_ident(&namespace.local)),
           ) {
             Some(Value::Pointer(p)) => p,
             _ => {
@@ -736,7 +737,7 @@ impl ModuleCompiler {
     let defn_name = match ident {
       Some(ident) => match self.scope_analysis.lookup_value(
         &OwnerId::Module, // TODO: Do we need the scope/owner_id to be passed in instead?
-        &Ident::from_swc_ident(&ident_to_ident_name(ident)),
+        &Ident::from_swc_ident(&ident_name_from_ident(ident)),
       ) {
         Some(Value::Pointer(p)) => p,
         _ => {

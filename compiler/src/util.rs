@@ -26,7 +26,7 @@ pub fn expr_from_simple_assign_target(
     swc_ecma_ast::SimpleAssignTarget::TsInstantiation(ts_instantiation) => {
       Expr::TsInstantiation(ts_instantiation.clone())
     }
-    swc_ecma_ast::SimpleAssignTarget::Invalid(invalid) => Expr::Invalid(invalid.clone()),
+    swc_ecma_ast::SimpleAssignTarget::Invalid(invalid) => Expr::Invalid(*invalid),
   }
 }
 
@@ -38,6 +38,13 @@ pub fn pat_from_assign_target_pat(
   match assign_target_pat {
     swc_ecma_ast::AssignTargetPat::Array(array_pat) => Pat::Array(array_pat.clone()),
     swc_ecma_ast::AssignTargetPat::Object(object_pat) => Pat::Object(object_pat.clone()),
-    swc_ecma_ast::AssignTargetPat::Invalid(invalid) => Pat::Invalid(invalid.clone()),
+    swc_ecma_ast::AssignTargetPat::Invalid(invalid) => Pat::Invalid(*invalid),
+  }
+}
+
+pub fn ident_name_from_ident(ident: &swc_ecma_ast::Ident) -> swc_ecma_ast::IdentName {
+  swc_ecma_ast::IdentName {
+    sym: ident.sym.clone(),
+    span: ident.span,
   }
 }

@@ -7,9 +7,10 @@ use crate::{
   asm::{Array, Builtin, Number, Object, Value},
   diagnostic::{DiagnosticContainer, DiagnosticReporter},
   expression_compiler::value_from_literal,
-  function_compiler::{ident_to_ident_name, Functionish},
+  function_compiler::Functionish,
   ident::Ident,
   module_compiler::ModuleCompiler,
+  util::ident_name_from_ident,
   Diagnostic,
 };
 
@@ -137,7 +138,7 @@ impl<'a> StaticExpressionCompiler<'a> {
       swc_ecma_ast::Expr::Ident(ident) => match self
         .mc
         .scope_analysis
-        .lookup(&Ident::from_swc_ident(&ident_to_ident_name(ident)))
+        .lookup(&Ident::from_swc_ident(&ident_name_from_ident(ident)))
         .map(|name| name.value.clone())
       {
         Some(Value::Pointer(p)) => self
@@ -163,7 +164,7 @@ impl<'a> StaticExpressionCompiler<'a> {
         self.mc.compile_fn(
           p.clone(),
           Functionish::Fn(
-            fn_.ident.as_ref().map(ident_to_ident_name),
+            fn_.ident.as_ref().map(ident_name_from_ident),
             fn_.function.as_ref().clone(),
           ),
         );
@@ -293,7 +294,7 @@ fn as_symbol_iterator(expr: &swc_ecma_ast::Expr) -> Option<Value> {
 
   match &*member_expr.obj {
     swc_ecma_ast::Expr::Ident(ident) => {
-      if ident.sym.to_string() != "Symbol" {
+      if ident.sym != "Symbol" {
         return None;
       }
     }
@@ -302,7 +303,7 @@ fn as_symbol_iterator(expr: &swc_ecma_ast::Expr) -> Option<Value> {
 
   match &member_expr.prop {
     swc_ecma_ast::MemberProp::Ident(ident) => {
-      if ident.sym.to_string() != "iterator" {
+      if ident.sym != "iterator" {
         return None;
       }
     }

@@ -11,11 +11,10 @@ use crate::{
   asm::{Builtin, Register, Value},
   constants::CONSTANTS,
   diagnostic::{DiagnosticContainer, DiagnosticReporter},
-  function_compiler::ident_to_ident_name,
   ident::Ident,
   name_allocator::{PointerAllocator, RegAllocator},
   scope::{init_std_scope, NameId, OwnerId, Scope, ScopeTrait},
-  util::{expr_from_simple_assign_target, pat_from_assign_target_pat},
+  util::{expr_from_simple_assign_target, ident_name_from_ident, pat_from_assign_target_pat},
 };
 
 use super::diagnostic::Diagnostic;
@@ -423,21 +422,21 @@ impl ScopeAnalysis {
         self.insert_pointer_name(
           scope,
           NameType::Import,
-          &ident_to_ident_name(&named_specifier.local),
+          &ident_name_from_ident(&named_specifier.local),
         );
       }
       Default(default_specifier) => {
         self.insert_pointer_name(
           scope,
           NameType::Import,
-          &ident_to_ident_name(&default_specifier.local),
+          &ident_name_from_ident(&default_specifier.local),
         );
       }
       Namespace(namespace_specifier) => {
         self.insert_pointer_name(
           scope,
           NameType::Import,
-          &ident_to_ident_name(&namespace_specifier.local),
+          &ident_name_from_ident(&namespace_specifier.local),
         );
       }
     }
@@ -455,18 +454,18 @@ impl ScopeAnalysis {
 
         match &named_specifier.orig {
           ModuleExportName::Ident(ident) => {
-            self.ident(scope, &Ident::from_swc_ident(&ident_to_ident_name(ident)))
+            self.ident(scope, &Ident::from_swc_ident(&ident_name_from_ident(ident)))
           }
           ModuleExportName::Str(_) => self.todo(export_specifier.span(), "ModuleExportName::Str"),
         }
       }
       Default(default_specifier) => self.ident(
         scope,
-        &Ident::from_swc_ident(&ident_to_ident_name(&default_specifier.exported)),
+        &Ident::from_swc_ident(&ident_name_from_ident(&default_specifier.exported)),
       ),
       Namespace(namespace_specifier) => match &namespace_specifier.name {
         ModuleExportName::Ident(ident) => {
-          self.ident(scope, &Ident::from_swc_ident(&ident_to_ident_name(ident)))
+          self.ident(scope, &Ident::from_swc_ident(&ident_name_from_ident(ident)))
         }
         ModuleExportName::Str(_) => self.todo(export_specifier.span(), "ModuleExportName::Str"),
       },
@@ -489,7 +488,7 @@ impl ScopeAnalysis {
       }
       Decl::Fn(fn_decl) => self.function(
         scope,
-        Some(&ident_to_ident_name(&fn_decl.ident)),
+        Some(&ident_name_from_ident(&fn_decl.ident)),
         &fn_decl.function,
         false,
       ),
@@ -568,14 +567,14 @@ impl ScopeAnalysis {
             self.insert_pointer_name(
               scope,
               NameType::Class,
-              &ident_to_ident_name(&class_decl.ident),
+              &ident_name_from_ident(&class_decl.ident),
             );
           }
           swc_ecma_ast::Decl::Fn(fn_decl) => {
             self.insert_pointer_name(
               scope,
               NameType::Function,
-              &ident_to_ident_name(&fn_decl.ident),
+              &ident_name_from_ident(&fn_decl.ident),
             );
           }
           swc_ecma_ast::Decl::Var(var_decl) => {
@@ -587,14 +586,14 @@ impl ScopeAnalysis {
 
             for decl in &var_decl.decls {
               for ident in self.get_pat_idents(&decl.name) {
-                self.insert_pointer_name(scope, name_type, &ident_to_ident_name(&ident));
+                self.insert_pointer_name(scope, name_type, &ident_name_from_ident(&ident));
               }
             }
           }
           swc_ecma_ast::Decl::TsInterface(_) => {}
           swc_ecma_ast::Decl::TsTypeAlias(_) => {}
           swc_ecma_ast::Decl::TsEnum(ts_enum) => {
-            self.insert_pointer_name(scope, NameType::Enum, &ident_to_ident_name(&ts_enum.id));
+            self.insert_pointer_name(scope, NameType::Enum, &ident_name_from_ident(&ts_enum.id));
           }
           swc_ecma_ast::Decl::TsModule(_) => {
             // Diagnostic emitted after hoist processing
@@ -607,12 +606,12 @@ impl ScopeAnalysis {
         ModuleDecl::ExportDefaultDecl(edd) => match &edd.decl {
           swc_ecma_ast::DefaultDecl::Class(class_decl) => {
             if let Some(ident) = &class_decl.ident {
-              self.insert_pointer_name(scope, NameType::Class, &ident_to_ident_name(ident));
+              self.insert_pointer_name(scope, NameType::Class, &ident_name_from_ident(ident));
             }
           }
           swc_ecma_ast::DefaultDecl::Fn(fn_decl) => {
             if let Some(ident) = &fn_decl.ident {
-              self.insert_pointer_name(scope, NameType::Function, &ident_to_ident_name(ident));
+              self.insert_pointer_name(scope, NameType::Function, &ident_name_from_ident(ident));
             }
           }
           swc_ecma_ast::DefaultDecl::TsInterfaceDecl(_) => {}
@@ -652,13 +651,13 @@ impl ScopeAnalysis {
           if var_decl.kind == swc_ecma_ast::VarDeclKind::Var {
             for decl in &var_decl.decls {
               for ident in self.get_pat_idents(&decl.name) {
-                self.insert_reg_name(scope, NameType::Var, &ident_to_ident_name(&ident), None);
+                self.insert_reg_name(scope, NameType::Var, &ident_name_from_ident(&ident), None);
               }
             }
           }
         }
         Decl::TsEnum(ts_enum) => {
-          self.insert_pointer_name(scope, NameType::Enum, &ident_to_ident_name(&ts_enum.id));
+          self.insert_pointer_name(scope, NameType::Enum, &ident_name_from_ident(&ts_enum.id));
         }
         _ => {}
       },
@@ -672,7 +671,7 @@ impl ScopeAnalysis {
           if var_decl.kind == swc_ecma_ast::VarDeclKind::Var {
             for decl in &var_decl.decls {
               for ident in self.get_pat_idents(&decl.name) {
-                self.insert_reg_name(scope, NameType::Var, &ident_to_ident_name(&ident), None);
+                self.insert_reg_name(scope, NameType::Var, &ident_name_from_ident(&ident), None);
               }
             }
           }
@@ -683,7 +682,7 @@ impl ScopeAnalysis {
           if var_decl.kind == swc_ecma_ast::VarDeclKind::Var {
             for decl in &var_decl.decls {
               for ident in self.get_pat_idents(&decl.name) {
-                self.insert_reg_name(scope, NameType::Var, &ident_to_ident_name(&ident), None);
+                self.insert_reg_name(scope, NameType::Var, &ident_name_from_ident(&ident), None);
               }
             }
           }
@@ -697,7 +696,7 @@ impl ScopeAnalysis {
           if var_decl.kind == swc_ecma_ast::VarDeclKind::Var {
             for decl in &var_decl.decls {
               for ident in self.get_pat_idents(&decl.name) {
-                self.insert_reg_name(scope, NameType::Var, &ident_to_ident_name(&ident), None);
+                self.insert_reg_name(scope, NameType::Var, &ident_name_from_ident(&ident), None);
               }
             }
           }
@@ -772,10 +771,14 @@ impl ScopeAnalysis {
 
     match decl {
       Decl::Class(class) => {
-        self.insert_pointer_name(scope, NameType::Class, &ident_to_ident_name(&class.ident));
+        self.insert_pointer_name(scope, NameType::Class, &ident_name_from_ident(&class.ident));
       }
       Decl::Fn(fn_) => {
-        self.insert_pointer_name(scope, NameType::Function, &ident_to_ident_name(&fn_.ident));
+        self.insert_pointer_name(
+          scope,
+          NameType::Function,
+          &ident_name_from_ident(&fn_.ident),
+        );
       }
       Decl::Var(var_decl) => {
         self.block_level_hoists_var_decl(scope, var_decl);
@@ -804,11 +807,11 @@ impl ScopeAnalysis {
           OwnerId::Span(..) => self.insert_reg_name(
             scope,
             name_type,
-            &ident_to_ident_name(&ident),
+            &ident_name_from_ident(&ident),
             Some(decl.span.hi),
           ),
           OwnerId::Module => {
-            self.insert_pointer_name(scope, name_type, &ident_to_ident_name(&ident))
+            self.insert_pointer_name(scope, name_type, &ident_name_from_ident(&ident))
           }
         }
       }
@@ -958,7 +961,7 @@ impl ScopeAnalysis {
     self.insert_this_name(&child_scope, owner_span);
 
     if let Some(ident) = ident {
-      self.insert_pointer_name(&child_scope, NameType::Class, &ident_to_ident_name(ident));
+      self.insert_pointer_name(&child_scope, NameType::Class, &ident_name_from_ident(ident));
     }
 
     for member in &class_.body {
@@ -984,7 +987,7 @@ impl ScopeAnalysis {
                   self.insert_reg_name(
                     &child_scope,
                     NameType::Param,
-                    &ident_to_ident_name(&ident.id),
+                    &ident_name_from_ident(&ident.id),
                     None,
                   );
                 }
@@ -1055,7 +1058,7 @@ impl ScopeAnalysis {
   fn fn_expr(&mut self, scope: &Scope, fn_expr: &swc_ecma_ast::FnExpr) {
     self.function(
       scope,
-      fn_expr.ident.as_ref().map(ident_to_ident_name).as_ref(),
+      fn_expr.ident.as_ref().map(ident_name_from_ident).as_ref(),
       &fn_expr.function,
       false,
     );
@@ -1069,7 +1072,7 @@ impl ScopeAnalysis {
         self.ident(scope, &Ident::this(this.span));
       }
       Expr::Ident(ident) => {
-        self.ident(scope, &Ident::from_swc_ident(&ident_to_ident_name(ident)));
+        self.ident(scope, &Ident::from_swc_ident(&ident_name_from_ident(ident)));
       }
       Expr::Lit(_) => {}
       Expr::Array(array) => {
@@ -1296,7 +1299,7 @@ impl ScopeAnalysis {
       Pat::Ident(ident) => {
         self.ident(
           scope,
-          &Ident::from_swc_ident(&ident_to_ident_name(&ident.id)),
+          &Ident::from_swc_ident(&ident_name_from_ident(&ident.id)),
         );
       }
       Pat::Array(array) => {
@@ -1317,7 +1320,7 @@ impl ScopeAnalysis {
             swc_ecma_ast::ObjectPatProp::Assign(assign) => {
               self.ident(
                 scope,
-                &Ident::from_swc_ident(&ident_to_ident_name(&assign.key)),
+                &Ident::from_swc_ident(&ident_name_from_ident(&assign.key)),
               );
 
               if let Some(value) = &assign.value {
@@ -1350,7 +1353,7 @@ impl ScopeAnalysis {
       Expr::Ident(ident) => {
         self.mutate_ident(
           scope,
-          &Ident::from_swc_ident(&ident_to_ident_name(ident)),
+          &Ident::from_swc_ident(&ident_name_from_ident(ident)),
           optional,
         );
       }
@@ -1480,7 +1483,7 @@ impl ScopeAnalysis {
       Pat::Ident(ident) => {
         self.mutate_ident(
           scope,
-          &Ident::from_swc_ident(&ident_to_ident_name(&ident.id)),
+          &Ident::from_swc_ident(&ident_name_from_ident(&ident.id)),
           false,
         );
       }
@@ -1503,7 +1506,7 @@ impl ScopeAnalysis {
 
               self.mutate_ident(
                 scope,
-                &Ident::from_swc_ident(&ident_to_ident_name(&assign.key)),
+                &Ident::from_swc_ident(&ident_name_from_ident(&assign.key)),
                 false,
               );
 
@@ -1614,7 +1617,7 @@ impl ScopeAnalysis {
     match prop_or_spread {
       PropOrSpread::Prop(prop) => match &**prop {
         swc_ecma_ast::Prop::Shorthand(ident) => {
-          self.ident(scope, &Ident::from_swc_ident(&ident_to_ident_name(ident)));
+          self.ident(scope, &Ident::from_swc_ident(&ident_name_from_ident(ident)));
         }
         swc_ecma_ast::Prop::KeyValue(key_value) => {
           self.prop_key(scope, &key_value.key);
@@ -1823,7 +1826,7 @@ impl ScopeAnalysis {
         self.insert_reg_name(
           scope,
           NameType::Param,
-          &ident_to_ident_name(&ident.id),
+          &ident_name_from_ident(&ident.id),
           None,
         );
       }
@@ -1845,7 +1848,7 @@ impl ScopeAnalysis {
               self.insert_reg_name(
                 scope,
                 NameType::Param,
-                &ident_to_ident_name(&assign.key),
+                &ident_name_from_ident(&assign.key),
                 None,
               );
 
