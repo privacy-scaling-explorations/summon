@@ -24,6 +24,7 @@ mod src_hash;
 mod static_expression_compiler;
 mod target_accessor;
 mod tests;
+mod util;
 mod visit_pointers;
 
 pub use assembler::assemble;

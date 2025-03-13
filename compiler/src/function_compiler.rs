@@ -17,10 +17,11 @@ use crate::name_allocator::{NameAllocator, RegAllocator};
 use crate::scope::{NameId, OwnerId};
 use crate::scope_analysis::{fn_to_owner_id, Name};
 use crate::src_hash::src_hash;
+use crate::util::ident_name_from_ident;
 
 #[derive(Clone, Debug)]
 pub enum Functionish {
-  Fn(Option<swc_ecma_ast::Ident>, swc_ecma_ast::Function),
+  Fn(Option<swc_ecma_ast::IdentName>, swc_ecma_ast::Function),
   Arrow(swc_ecma_ast::ArrowExpr),
   Constructor(Vec<FnLine>, OwnerId, swc_ecma_ast::Constructor),
 }
@@ -275,7 +276,7 @@ impl<'a> FunctionCompiler<'a> {
           ),
         };
       }
-      Functionish::Arrow(arrow) => match &arrow.body {
+      Functionish::Arrow(arrow) => match arrow.body.as_ref() {
         swc_ecma_ast::BlockStmtOrExpr::BlockStmt(block) => {
           self.handle_block_body(block);
         }
@@ -350,7 +351,9 @@ impl<'a> FunctionCompiler<'a> {
                 swc_ecma_ast::TsParamPropParam::Ident(ident) => {
                   match ident.id.sym.to_string().as_str() {
                     "this" => None,
-                    _ => Some(self.get_variable_register(&Ident::from_swc_ident(&ident.id))),
+                    _ => Some(self.get_variable_register(&Ident::from_swc_ident(
+                      &ident_name_from_ident(&ident.id),
+                    ))),
                   }
                 }
                 swc_ecma_ast::TsParamPropParam::Assign(assign) => {
@@ -377,7 +380,7 @@ impl<'a> FunctionCompiler<'a> {
     Some(match param_pat {
       Pat::Ident(ident) => match ident.id.sym.to_string().as_str() {
         "this" => return None,
-        _ => self.get_variable_register(&Ident::from_swc_ident(&ident.id)),
+        _ => self.get_variable_register(&Ident::from_swc_ident(&ident_name_from_ident(&ident.id))),
       },
       Pat::Assign(assign) => return self.get_pattern_register_opt(&assign.left),
       Pat::Array(_) => self.allocate_numbered_reg("_array_pat"),
@@ -990,14 +993,16 @@ impl<'a> FunctionCompiler<'a> {
   }
 
   fn for_(&mut self, for_: &swc_ecma_ast::ForStmt) {
-    if let Some(var_decl_or_expr) = &for_.init { match var_decl_or_expr {
-      swc_ecma_ast::VarDeclOrExpr::VarDecl(var_decl) => {
-        self.var_declaration(var_decl);
+    if let Some(var_decl_or_expr) = &for_.init {
+      match var_decl_or_expr {
+        swc_ecma_ast::VarDeclOrExpr::VarDecl(var_decl) => {
+          self.var_declaration(var_decl);
+        }
+        swc_ecma_ast::VarDeclOrExpr::Expr(expr) => {
+          self.expression(expr);
+        }
       }
-      swc_ecma_ast::VarDeclOrExpr::Expr(expr) => {
-        self.expression(expr);
-      }
-    } }
+    }
 
     let for_test_label = Label {
       name: self.label_allocator.allocate_numbered("for_test"),
@@ -1036,7 +1041,9 @@ impl<'a> FunctionCompiler<'a> {
 
     self.label(for_continue_label);
 
-    if let Some(update) = &for_.update { self.expression(update) }
+    if let Some(update) = &for_.update {
+      self.expression(update)
+    }
 
     self.push(Instruction::Jmp(for_test_label.ref_()));
 
@@ -1049,14 +1056,18 @@ impl<'a> FunctionCompiler<'a> {
     let mut ec = ExpressionCompiler { fnc: self };
 
     let pat = match &for_of.left {
-      swc_ecma_ast::VarDeclOrPat::VarDecl(var_decl) => {
+      swc_ecma_ast::ForHead::VarDecl(var_decl) => {
         if var_decl.decls.len() != 1 {
           panic!("Unexpected number of declarations on left side of for-of loop");
         }
 
         &var_decl.decls[0].name
       }
-      swc_ecma_ast::VarDeclOrPat::Pat(pat) => pat,
+      swc_ecma_ast::ForHead::Pat(pat) => pat,
+      swc_ecma_ast::ForHead::UsingDecl(_) => {
+        self.todo(for_of.left.span(), "Using declaration in for-of loop");
+        return;
+      }
     };
 
     let value_reg = ec.fnc.get_pattern_register(pat);
@@ -1135,36 +1146,39 @@ impl<'a> FunctionCompiler<'a> {
           .compile_class(None, Some(&class.ident), &class.class);
       }
       Fn(fn_decl) => {
-        let p = match self.lookup_value(&Ident::from_swc_ident(&fn_decl.ident)) {
-          Some(Value::Pointer(p)) => p,
-          _ => {
-            self.internal_error(
-              fn_decl.ident.span,
-              &format!(
-                "Lookup of function {} was not a pointer, lookup_result: {:?}",
-                fn_decl.ident.sym,
-                self.lookup_value(&Ident::from_swc_ident(&fn_decl.ident))
-              ),
-            );
+        let p =
+          match self.lookup_value(&Ident::from_swc_ident(&ident_name_from_ident(&fn_decl.ident))) {
+            Some(Value::Pointer(p)) => p,
+            _ => {
+              self.internal_error(
+                fn_decl.ident.span,
+                &format!(
+                  "Lookup of function {} was not a pointer, lookup_result: {:?}",
+                  fn_decl.ident.sym,
+                  self.lookup_value(&Ident::from_swc_ident(&ident_name_from_ident(&fn_decl.ident)))
+                ),
+              );
 
-            return;
-          }
-        };
+              return;
+            }
+          };
 
         FunctionCompiler::new(self.mc).compile(
           p,
-          Functionish::Fn(Some(fn_decl.ident.clone()), fn_decl.function.clone()),
+          Functionish::Fn(
+            Some(ident_name_from_ident(&fn_decl.ident)),
+            fn_decl.function.as_ref().clone(),
+          ),
         );
       }
       Var(var_decl) => self.var_declaration(var_decl),
       TsInterface(interface_decl) => self.todo(interface_decl.span, "TsInterface declaration"),
       TsTypeAlias(_) => {}
       TsEnum(ts_enum) => {
-        let pointer = match self
-          .mc
-          .scope_analysis
-          .lookup_value(&OwnerId::Module, &Ident::from_swc_ident(&ts_enum.id))
-        {
+        let pointer = match self.mc.scope_analysis.lookup_value(
+          &OwnerId::Module,
+          &Ident::from_swc_ident(&ident_name_from_ident(&ts_enum.id)),
+        ) {
           Some(Value::Pointer(p)) => p,
           _ => {
             self.internal_error(
@@ -1184,6 +1198,7 @@ impl<'a> FunctionCompiler<'a> {
         });
       }
       TsModule(ts_module) => self.todo(ts_module.span, "TsModule declaration"),
+      Using(using) => self.todo(using.span, "Using declaration"),
     };
   }
 
@@ -1233,13 +1248,11 @@ impl<'a> FunctionCompiler<'a> {
     let start = swc_common::Span {
       lo: span.lo,
       hi: span.lo,
-      ctxt: span.ctxt,
     };
 
     let end = swc_common::Span {
       lo: span.hi,
       hi: span.hi,
-      ctxt: span.ctxt,
     };
 
     let mut mutated_registers = BTreeSet::<Register>::new();

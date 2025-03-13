@@ -5,6 +5,7 @@ use crate::{
   diagnostic::DiagnosticReporter,
   expression_compiler::{CompiledExpression, ExpressionCompiler},
   ident::Ident as CrateIdent,
+  util::{expr_from_simple_assign_target, ident_name_from_ident},
 };
 use swc_common::Spanned;
 
@@ -24,10 +25,14 @@ impl TargetAccessor {
     use swc_ecma_ast::Expr::*;
 
     match expr {
-      Ident(ident) => match ec.fnc.lookup(&crate::ident::Ident::from_swc_ident(ident)) {
-        Some(name) => !name.effectively_const,
-        _ => false, // TODO: InternalError?
-      },
+      Ident(ident) => {
+        match ec.fnc.lookup(&crate::ident::Ident::from_swc_ident(
+          &ident_name_from_ident(ident),
+        )) {
+          Some(name) => !name.effectively_const,
+          _ => false, // TODO: InternalError?
+        }
+      }
       This(_) => true,
       Member(member) => TargetAccessor::is_eligible_expr(ec, &member.obj),
 
@@ -49,6 +54,18 @@ impl TargetAccessor {
     }
   }
 
+  pub fn compile_simple_assign_target(
+    ec: &mut ExpressionCompiler,
+    simple_assign_target: &swc_ecma_ast::SimpleAssignTarget,
+    is_outermost: bool,
+  ) -> TargetAccessor {
+    TargetAccessor::compile(
+      ec,
+      &expr_from_simple_assign_target(simple_assign_target),
+      is_outermost,
+    )
+  }
+
   pub fn compile(
     ec: &mut ExpressionCompiler,
     expr: &swc_ecma_ast::Expr,
@@ -57,7 +74,10 @@ impl TargetAccessor {
     use swc_ecma_ast::Expr::*;
 
     match expr {
-      Ident(ident) => TargetAccessor::compile_ident(ec, &CrateIdent::from_swc_ident(ident)),
+      Ident(ident) => TargetAccessor::compile_ident(
+        ec,
+        &CrateIdent::from_swc_ident(&ident_name_from_ident(ident)),
+      ),
       This(this) => TargetAccessor::compile_ident(ec, &CrateIdent::this(this.span)),
       Member(member) => {
         let obj = TargetAccessor::compile(ec, &member.obj, false);
@@ -257,5 +277,6 @@ pub fn get_expr_type_str(expr: &swc_ecma_ast::Expr) -> &'static str {
     JSXElement(_) => "JSXElement",
     JSXFragment(_) => "JSXFragment",
     TsInstantiation(_) => "TsInstantiation",
+    TsSatisfies(_) => "TsSatisfies",
   }
 }

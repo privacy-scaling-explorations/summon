@@ -1,11 +1,11 @@
 #[derive(Debug)]
 pub struct Ident {
-  pub sym: swc_atoms::JsWord,
+  pub sym: swc_atoms::Atom,
   pub span: swc_common::Span,
 }
 
 impl Ident {
-  pub fn from_swc_ident(ident: &swc_ecma_ast::Ident) -> Self {
+  pub fn from_swc_ident(ident: &swc_ecma_ast::IdentName) -> Self {
     Ident {
       sym: ident.sym.clone(),
       span: ident.span,
@@ -14,7 +14,7 @@ impl Ident {
 
   pub fn this(span: swc_common::Span) -> Self {
     Ident {
-      sym: swc_atoms::JsWord::from("this"),
+      sym: swc_atoms::Atom::from("this"),
       span,
     }
   }

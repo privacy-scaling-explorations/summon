@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 
-use swc_common::Spanned;
 use summon_common::to_i32;
+use swc_common::Spanned;
 
 use crate::{
   asm::{Array, Builtin, Number, Object, Value},
@@ -10,6 +10,7 @@ use crate::{
   function_compiler::Functionish,
   ident::Ident,
   module_compiler::ModuleCompiler,
+  util::ident_name_from_ident,
   Diagnostic,
 };
 
@@ -82,7 +83,7 @@ impl<'a> StaticExpressionCompiler<'a> {
                   swc_ecma_ast::PropName::Str(str) => Value::String(str.value.to_string()),
                   swc_ecma_ast::PropName::Num(num) => Value::Number(Number(num.value)),
                   swc_ecma_ast::PropName::Computed(computed) => self.expr(&computed.expr),
-                  swc_ecma_ast::PropName::BigInt(bi) => Value::BigInt(bi.value.clone()),
+                  swc_ecma_ast::PropName::BigInt(bi) => Value::BigInt(bi.value.as_ref().clone()),
                 };
 
                 let value = self.expr(&kv.value);
@@ -112,7 +113,7 @@ impl<'a> StaticExpressionCompiler<'a> {
 
                 self.mc.compile_fn(
                   p.clone(),
-                  Functionish::Fn(fn_ident, method.function.clone()),
+                  Functionish::Fn(fn_ident, method.function.as_ref().clone()),
                 );
 
                 (key, Value::Pointer(p))
@@ -137,7 +138,7 @@ impl<'a> StaticExpressionCompiler<'a> {
       swc_ecma_ast::Expr::Ident(ident) => match self
         .mc
         .scope_analysis
-        .lookup(&Ident::from_swc_ident(ident))
+        .lookup(&Ident::from_swc_ident(&ident_name_from_ident(ident)))
         .map(|name| name.value.clone())
       {
         Some(Value::Pointer(p)) => self
@@ -162,7 +163,10 @@ impl<'a> StaticExpressionCompiler<'a> {
 
         self.mc.compile_fn(
           p.clone(),
-          Functionish::Fn(fn_.ident.clone(), fn_.function.clone()),
+          Functionish::Fn(
+            fn_.ident.as_ref().map(ident_name_from_ident),
+            fn_.function.as_ref().clone(),
+          ),
         );
 
         Value::Pointer(p)
@@ -264,6 +268,10 @@ impl<'a> StaticExpressionCompiler<'a> {
       swc_ecma_ast::Expr::TsConstAssertion(tca) => self.expr(&tca.expr),
       swc_ecma_ast::Expr::TsNonNull(tnn) => self.expr(&tnn.expr),
       swc_ecma_ast::Expr::TsAs(ta) => self.expr(&ta.expr),
+      swc_ecma_ast::Expr::TsSatisfies(_) => {
+        self.todo(expr.span(), "TsSatisfies expr");
+        Value::String("(error)".to_string())
+      }
     }
   }
 
@@ -286,7 +294,7 @@ fn as_symbol_iterator(expr: &swc_ecma_ast::Expr) -> Option<Value> {
 
   match &*member_expr.obj {
     swc_ecma_ast::Expr::Ident(ident) => {
-      if ident.sym.to_string() != "Symbol" {
+      if ident.sym != "Symbol" {
         return None;
       }
     }
@@ -295,7 +303,7 @@ fn as_symbol_iterator(expr: &swc_ecma_ast::Expr) -> Option<Value> {
 
   match &member_expr.prop {
     swc_ecma_ast::MemberProp::Ident(ident) => {
-      if ident.sym.to_string() != "iterator" {
+      if ident.sym != "iterator" {
         return None;
       }
     }
