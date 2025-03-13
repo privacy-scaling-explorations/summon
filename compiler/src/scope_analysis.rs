@@ -677,8 +677,8 @@ impl ScopeAnalysis {
           }
         }
       }
-      Stmt::ForIn(for_in) => {
-        if let swc_ecma_ast::VarDeclOrPat::VarDecl(var_decl) = &for_in.left {
+      Stmt::ForIn(for_in) => match &for_in.left {
+        swc_ecma_ast::ForHead::VarDecl(var_decl) => {
           if var_decl.kind == swc_ecma_ast::VarDeclKind::Var {
             for decl in &var_decl.decls {
               for ident in self.get_pat_idents(&decl.name) {
@@ -687,9 +687,12 @@ impl ScopeAnalysis {
             }
           }
         }
-      }
-      Stmt::ForOf(for_of) => {
-        if let swc_ecma_ast::VarDeclOrPat::VarDecl(var_decl) = &for_of.left {
+        swc_ecma_ast::ForHead::UsingDecl(_) | swc_ecma_ast::ForHead::Pat(_) => {
+          // Diagnostic emitted after hoist processing
+        }
+      },
+      Stmt::ForOf(for_of) => match &for_of.left {
+        swc_ecma_ast::ForHead::VarDecl(var_decl) => {
           if var_decl.kind == swc_ecma_ast::VarDeclKind::Var {
             for decl in &var_decl.decls {
               for ident in self.get_pat_idents(&decl.name) {
@@ -698,7 +701,10 @@ impl ScopeAnalysis {
             }
           }
         }
-      }
+        swc_ecma_ast::ForHead::UsingDecl(_) | swc_ecma_ast::ForHead::Pat(_) => {
+          // Diagnostic emitted after hoist processing
+        }
+      },
       Stmt::Empty(_) => {}
       Stmt::Debugger(_) => {}
       Stmt::With(_) => {}
@@ -1751,12 +1757,15 @@ impl ScopeAnalysis {
         let child_scope = scope.nest(None);
 
         match &for_in.left {
-          swc_ecma_ast::VarDeclOrPat::VarDecl(var_decl) => {
+          swc_ecma_ast::ForHead::VarDecl(var_decl) => {
             self.block_level_hoists_var_decl(&child_scope, var_decl);
             self.var_decl(&child_scope, var_decl);
           }
-          swc_ecma_ast::VarDeclOrPat::Pat(pat) => {
+          swc_ecma_ast::ForHead::Pat(pat) => {
             self.param_pat(&child_scope, pat);
+          }
+          swc_ecma_ast::ForHead::UsingDecl(using_decl) => {
+            self.todo(using_decl.span, "using decl");
           }
         }
 
@@ -1767,12 +1776,15 @@ impl ScopeAnalysis {
         let child_scope = scope.nest(None);
 
         match &for_of.left {
-          swc_ecma_ast::VarDeclOrPat::VarDecl(var_decl) => {
+          swc_ecma_ast::ForHead::VarDecl(var_decl) => {
             self.block_level_hoists_var_decl(&child_scope, var_decl);
             self.var_decl(&child_scope, var_decl);
           }
-          swc_ecma_ast::VarDeclOrPat::Pat(pat) => {
+          swc_ecma_ast::ForHead::Pat(pat) => {
             self.param_pat(&child_scope, pat);
+          }
+          swc_ecma_ast::ForHead::UsingDecl(using_decl) => {
+            self.todo(using_decl.span, "using decl");
           }
         }
 

@@ -1055,14 +1055,18 @@ impl<'a> FunctionCompiler<'a> {
     let mut ec = ExpressionCompiler { fnc: self };
 
     let pat = match &for_of.left {
-      swc_ecma_ast::VarDeclOrPat::VarDecl(var_decl) => {
+      swc_ecma_ast::ForHead::VarDecl(var_decl) => {
         if var_decl.decls.len() != 1 {
           panic!("Unexpected number of declarations on left side of for-of loop");
         }
 
         &var_decl.decls[0].name
       }
-      swc_ecma_ast::VarDeclOrPat::Pat(pat) => pat,
+      swc_ecma_ast::ForHead::Pat(pat) => pat,
+      swc_ecma_ast::ForHead::UsingDecl(_) => {
+        self.todo(for_of.left.span(), "Using declaration in for-of loop");
+        return;
+      }
     };
 
     let value_reg = ec.fnc.get_pattern_register(pat);
