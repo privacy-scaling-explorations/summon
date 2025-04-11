@@ -1,7 +1,9 @@
 use std::fmt;
 use std::rc::Rc;
 
+use crate::circuit_signal::CircuitSignal;
 use crate::native_function::{native_fn, NativeFunction};
+use crate::val_dynamic_downcast::val_dynamic_downcast;
 use crate::vs_class::VsClass;
 use crate::vs_value::{LoadFunctionResult, ToVal, Val};
 
@@ -37,4 +39,10 @@ impl fmt::Display for SummonBuiltin {
   }
 }
 
-static IS_SIGNAL: NativeFunction = native_fn(|_this, params| Ok(Val::Bool(true)));
+static IS_SIGNAL: NativeFunction = native_fn(|_this, params| {
+  let Some(x) = params.first() else {
+    return Ok(false.to_val());
+  };
+
+  Ok(val_dynamic_downcast::<CircuitSignal>(x).is_some().to_val())
+});
