@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use crate::{
   circuit_signal::{CircuitSignal, CircuitSignalData},
-  operations::{op_minus, op_mul, op_plus, op_triple_eq_impl},
+  operations::{op_bit_xor, op_mul, op_triple_eq_impl},
   type_error_builtin::ToTypeError,
   unary_op::UnaryOp,
   val_dynamic_downcast::val_dynamic_downcast,
@@ -63,7 +63,7 @@ fn gen_direct_merge<'a>(
   }
 
   Box::new(|left, right| {
-    op_plus(
+    op_bit_xor(
       &op_mul(left_flag, left).unwrap(),
       &op_mul(right_flag, right).unwrap(),
     )
@@ -89,12 +89,14 @@ fn optimized_direct_merge<'a>(
         // out = left_flag * left + right_flag * right
         //     = (1 - right_flag) * left + right_flag * right
         //     = left + right_flag * (right - left)
+        // and with xor, + and - are the same:
+        //     = left + right_flag * (right + left)
         return Some(Box::new(move |left, right| {
           let (left, right) = if swap { (right, left) } else { (left, right) };
 
-          op_plus(
+          op_bit_xor(
             left,
-            &op_mul(right_flag, &op_minus(right, left).unwrap()).unwrap(),
+            &op_mul(right_flag, &op_bit_xor(right, left).unwrap()).unwrap(),
           )
           .unwrap()
         }));
