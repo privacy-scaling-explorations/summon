@@ -10,9 +10,11 @@ mod math_builtin;
 mod number_builtin;
 pub mod range_error_builtin;
 mod string_builtin;
+mod summon_builtin;
 mod symbol_builtin;
 pub mod type_error_builtin;
 
+use summon_builtin::SummonBuiltin;
 use summon_common::BUILTIN_COUNT;
 
 use crate::{
@@ -48,4 +50,5 @@ pub static BUILTIN_VALS: [fn() -> Val; BUILTIN_COUNT] = [
   || VsSymbol::ITERATOR.to_val(),
   || BigIntBuiltin {}.to_val(),
   || ConsoleBuiltin {}.to_val(),
+  || SummonBuiltin {}.to_val(),
 ];
