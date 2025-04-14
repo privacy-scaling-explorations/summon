@@ -258,6 +258,18 @@ impl Val {
       Val::CopyCounter(_) => None,
     }
   }
+
+  pub fn make_object(pairs: &[(&str, Val)]) -> Val {
+    VsObject {
+      string_map: pairs
+        .iter()
+        .map(|(k, v)| (k.to_string(), v.clone()))
+        .collect(),
+      symbol_map: Default::default(),
+      prototype: Val::Void,
+    }
+    .to_val()
+  }
 }
 
 impl ValTrait for Val {
