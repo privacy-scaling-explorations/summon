@@ -9,25 +9,69 @@ use boolify::boolify;
 use serde_json::to_string_pretty;
 use summon_cli::handle_diagnostics_cli;
 use summon_compiler::{bristol_depth, compile, resolve_entry_path, CompileOk};
+use summon_vm::vs_value::Val;
 
 fn main() {
   let args: Vec<String> = std::env::args().collect();
 
   if args.len() != 2 && args.len() != 4 {
-    eprintln!("Usage: summonc main.ts [--boolify-width WIDTH]");
+    eprintln!("Usage: summonc main.ts [--public-inputs json|FILE.json] [--boolify-width WIDTH]");
     std::process::exit(1);
   }
 
-  let boolify_width = if args.len() == 4 {
-    assert_eq!(args[2], "--boolify-width");
-    Some(args[3].parse::<usize>().unwrap())
-  } else {
-    None
-  };
+  let mut public_inputs_path = None;
+  let mut boolify_width = None;
+
+  for i in 2..args.len() {
+    if args[i] == "--public-inputs" {
+      public_inputs_path = Some(args.get(i + 1).expect("missing arg").clone());
+    } else if args[i] == "--boolify-width" {
+      boolify_width = Some(
+        args
+          .get(i + 1)
+          .expect("missing arg")
+          .parse::<usize>()
+          .expect("invalid usize"),
+      );
+    }
+  }
 
   let entry_point = resolve_entry_path(&args[1]);
 
-  let compile_result = compile(&HashMap::new(), entry_point, |path| {
+  let public_inputs: HashMap<String, Val> = if let Some(path) = public_inputs_path {
+    if path.get(0..1) == Some("{") {
+      // if the first character is '{', we assume it's a json string
+      let numbers = serde_json::from_str::<HashMap<String, usize>>(&path)
+        .expect("Failed to parse public inputs string");
+
+      numbers
+        .into_iter()
+        .map(|(k, v)| (k, Val::Number(v as f64)))
+        .collect::<HashMap<_, _>>()
+    } else {
+      let path = Path::new(&path);
+
+      if !path.exists() {
+        eprintln!("Public inputs file does not exist: {}", path.display());
+        std::process::exit(1);
+      }
+
+      let file = File::open(path).expect("Failed to open public inputs file");
+
+      // only numbers for now
+      let numbers = serde_json::from_reader::<_, HashMap<String, usize>>(file)
+        .expect("Failed to parse public inputs file");
+
+      numbers
+        .into_iter()
+        .map(|(k, v)| (k, Val::Number(v as f64)))
+        .collect::<HashMap<_, _>>()
+    }
+  } else {
+    HashMap::new()
+  };
+
+  let compile_result = compile(&public_inputs, entry_point, |path| {
     fs::read_to_string(path).map_err(|e| e.to_string())
   });
 

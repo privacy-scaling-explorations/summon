@@ -138,7 +138,10 @@ static PUBLIC_INPUT: NativeFunction = native_fn(|this, params| {
   ]);
 
   let Ok(true) = op_triple_eq_impl(type_, &number_type) else {
-    return Err("Not implemented yet: non-number summon type".to_internal_error());
+    return Err(
+      "Not implemented yet: type passed to io.publicInput was something other than summon.number()"
+        .to_internal_error(),
+    );
   };
 
   let Some(value) = io_data.public_inputs.get(&id.to_string()) else {

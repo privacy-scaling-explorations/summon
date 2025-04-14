@@ -1372,6 +1372,7 @@ dependencies = [
  "serde_json",
  "serde_qs",
  "summon_compiler",
+ "summon_vm",
  "url",
 ]
 
