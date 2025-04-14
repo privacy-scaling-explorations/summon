@@ -1,4 +1,8 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{
+  cell::RefCell,
+  collections::{HashMap, HashSet},
+  rc::Rc,
+};
 
 use num_bigint::BigInt;
 use summon_vm::{
@@ -10,7 +14,7 @@ use summon_vm::{
   val_dynamic_downcast::val_dynamic_downcast,
   vs_array::VsArray,
   vs_class::VsClass,
-  vs_value::{ToDynamicVal, ToVal, Val, VsType},
+  vs_value::{ToVal, Val, VsType},
   LoadFunctionResult, ValTrait,
 };
 
@@ -19,17 +23,30 @@ pub struct SummonIO {
   pub data: Rc<RefCell<SummonIOData>>,
 }
 
-pub fn make_summon_io(public_inputs: &HashMap<String, Val>) -> Val {
-  SummonIO {
-    data: Rc::new(RefCell::new(SummonIOData {
-      public_inputs: public_inputs.clone(),
-    })),
+impl SummonIO {
+  pub fn new(public_inputs: &HashMap<String, Val>) -> Self {
+    Self {
+      data: Rc::new(RefCell::new(SummonIOData {
+        public_inputs: public_inputs.clone(),
+        public_inputs_used: HashSet::new(),
+      })),
+    }
   }
-  .to_dynamic_val()
+
+  pub fn unused_public_inputs(&self) -> Vec<String> {
+    let io_data = self.data.borrow();
+    io_data
+      .public_inputs
+      .keys()
+      .filter(|key| !io_data.public_inputs_used.contains(*key))
+      .cloned()
+      .collect()
+  }
 }
 
 pub struct SummonIOData {
   pub public_inputs: HashMap<String, Val>,
+  pub public_inputs_used: HashSet<String>,
 }
 
 impl ValTrait for SummonIO {
@@ -122,7 +139,7 @@ static PUBLIC_INPUT: NativeFunction = native_fn(|this, params| {
     todo!()
   };
 
-  let io_data = io.data.borrow();
+  let mut io_data = io.data.borrow_mut();
 
   let (Some(id), Some(type_)) = (params.first(), params.get(1)) else {
     return Err("Params (id, type) not provided".to_type_error());
@@ -148,5 +165,9 @@ static PUBLIC_INPUT: NativeFunction = native_fn(|this, params| {
     return Err(format!("Missing public input: \"{}\"", id).to_error());
   };
 
-  Ok(value.clone())
+  let value = value.clone();
+
+  io_data.public_inputs_used.insert(id.to_string());
+
+  Ok(value)
 });

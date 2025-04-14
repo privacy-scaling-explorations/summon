@@ -1,7 +1,7 @@
 use std::{cell::RefCell, collections::BTreeMap, collections::HashMap, rc::Rc};
 
 use crate::asm::Module;
-use crate::summon_io::make_summon_io;
+use crate::summon_io::SummonIO;
 use summon_vm::vs_value::{ToDynamicVal, Val, VsType};
 use summon_vm::{
   circuit::Circuit,
@@ -68,7 +68,23 @@ where
     });
   }
 
-  let (input_len, outputs) = run(public_inputs, main);
+  let io = SummonIO::new(public_inputs);
+  let (input_len, outputs) = run(main, &io.clone().to_dynamic_val());
+
+  for unused_input in io.unused_public_inputs() {
+    let unused_path = ResolvedPath {
+      path: "(public inputs)".to_string(),
+    };
+
+    diagnostics
+      .entry(unused_path)
+      .or_default()
+      .push(Diagnostic {
+        level: DiagnosticLevel::Lint,
+        message: format!("Unused public input: {}", unused_input),
+        span: DUMMY_SP,
+      });
+  }
 
   let (output_ids, builder) = build(input_len, outputs);
   let circuit = generate_circuit(name, main_asm, output_ids, builder);
@@ -198,14 +214,14 @@ fn resolve_ptr<'a>(
   None
 }
 
-fn run(public_inputs: &HashMap<String, Val>, main: Val) -> (usize, Vec<Val>) {
+fn run(main: Val, io: &Val) -> (usize, Vec<Val>) {
   let param_count = match val_dynamic_downcast::<CsFunction>(&main) {
     Some(cs_fn) => cs_fn.parameter_count,
     None => panic!("Default export is not a regular function"),
   };
 
   let id_gen = Rc::new(RefCell::new(IdGenerator::new()));
-  let mut input_args = vec![make_summon_io(public_inputs)];
+  let mut input_args = vec![io.clone()];
 
   for _ in 1..param_count {
     input_args.push(

@@ -84,10 +84,8 @@ fn main() {
 
   let CompileOk {
     circuit,
-    diagnostics,
+    diagnostics: _,
   } = compile_result.expect("Error should have caused earlier exit");
-
-  handle_diagnostics_cli(&diagnostics);
 
   let output_dir = Path::new("output");
 

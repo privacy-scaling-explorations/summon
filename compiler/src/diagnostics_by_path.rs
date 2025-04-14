@@ -65,7 +65,7 @@ fn handle_file_diagnostics(
 
   let mut level_counts = HashMap::<DiagnosticLevel, usize>::new();
 
-  let text = if file_path == "(str)" {
+  let text = if file_path.get(0..1) == Some("(") {
     None
   } else {
     Some(std::fs::read_to_string(file_path).unwrap())
