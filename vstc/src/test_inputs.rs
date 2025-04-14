@@ -7,8 +7,8 @@ mod tests {
   use std::rc::Rc;
 
   use summon_compiler::asm::Structured;
-  use summon_compiler::compile_linked_module;
   use summon_compiler::{assemble, parse_module};
+  use summon_compiler::{compile_linked_module, DiagnosticsByPath};
   use summon_vm::vs_value::Val;
   use summon_vm::{circuit_vm::CircuitVM, DecoderMaker};
   use summon_vm::{Bytecode, ValTrait};
@@ -62,19 +62,11 @@ mod tests {
             fs::read_to_string(path).map_err(|err| err.to_string())
           });
 
-          for (path, diagnostics) in compile_result.diagnostics.iter() {
-            handle_diagnostics_cli(&path.path, diagnostics);
+          handle_diagnostics_cli(&compile_result.diagnostics);
+          let dbp = DiagnosticsByPath(compile_result.diagnostics.clone());
 
-            for diagnostic in diagnostics {
-              use summon_compiler::DiagnosticLevel;
-
-              match diagnostic.level {
-                DiagnosticLevel::Error | DiagnosticLevel::InternalError => {
-                  failed_paths.insert(rel_file_path.clone());
-                }
-                DiagnosticLevel::Lint | DiagnosticLevel::CompilerDebug => {}
-              }
-            }
+          if dbp.has_errors() {
+            failed_paths.insert(rel_file_path.clone());
           }
 
           let module = compile_result

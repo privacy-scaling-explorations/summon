@@ -1,4 +1,5 @@
 use std::{
+  collections::HashMap,
   fs::{self, File},
   io::BufWriter,
   path::Path,
@@ -26,7 +27,7 @@ fn main() {
 
   let entry_point = resolve_entry_path(&args[1]);
 
-  let compile_result = compile(entry_point, |path| {
+  let compile_result = compile(&HashMap::new(), entry_point, |path| {
     fs::read_to_string(path).map_err(|e| e.to_string())
   });
 

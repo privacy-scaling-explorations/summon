@@ -3,6 +3,7 @@
 import median from "./lib/median.ts";
 
 export default function median11(
+  _io: Summon.IO,
   x0: number,
   x1: number,
   x2: number,

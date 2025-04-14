@@ -37,9 +37,7 @@ pub fn compile_command(args: &[String]) {
     file.write_all(b"\n").expect("Failed to write out.vsm");
   }
 
-  for (path, diagnostics) in compile_result.diagnostics.iter() {
-    handle_diagnostics_cli(&path.path, diagnostics);
-  }
+  handle_diagnostics_cli(&compile_result.diagnostics);
 }
 
 fn show_help() {

@@ -16,9 +16,7 @@ pub fn to_bytecode(format: RunFormat, file_path: &str) -> Bytecode {
         std::fs::read_to_string(path).map_err(|err| err.to_string())
       });
 
-      for (path, diagnostics) in compile_result.diagnostics.iter() {
-        handle_diagnostics_cli(&path.path, diagnostics);
-      }
+      handle_diagnostics_cli(&compile_result.diagnostics);
 
       assemble(
         &compile_result

@@ -1,6 +1,6 @@
 //! test [1] => [2]
 
-export default (x: number) => {
+export default (_io: Summon.IO, x: number) => {
   let count = 0;
 
   if (summon.isSignal('hello')) {

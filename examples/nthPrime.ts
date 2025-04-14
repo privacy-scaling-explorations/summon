@@ -7,7 +7,7 @@
 
 const limit = 10;
 
-export default function main(n: number) {
+export default function main(_io: Summon.IO, n: number) {
   let p = 0;
   let i = 0;
 

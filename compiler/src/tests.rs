@@ -1,8 +1,12 @@
 #[cfg(test)]
 mod tests_ {
-  use std::{collections::BTreeMap, fs, path::PathBuf};
+  use std::{
+    collections::{BTreeMap, HashMap},
+    fs,
+    path::PathBuf,
+  };
 
-  use crate::{compile, resolve_entry_path::resolve_entry_path, CompileOk};
+  use crate::{compile, resolve_entry_path::resolve_entry_path, DiagnosticsByPath};
 
   #[test]
   fn test_annotations() {
@@ -18,11 +22,18 @@ mod tests_ {
 
       let path = resolve_entry_path(&path);
 
-      let CompileOk {
-        circuit,
-        diagnostics: _,
-      } = compile(path, |p| fs::read_to_string(p).map_err(|e| e.to_string()))
-        .expect("Compile failed");
+      let compile_result = compile(&HashMap::new(), path, |p| {
+        fs::read_to_string(p).map_err(|e| e.to_string())
+      });
+
+      let diagnostics = match &compile_result {
+        Ok(compile_ok) => &compile_ok.diagnostics,
+        Err(compile_err) => &compile_err.diagnostics,
+      };
+
+      println!("{}", DiagnosticsByPath(diagnostics.clone()));
+
+      let circuit = compile_result.expect("Compile failed").circuit;
 
       let inputs = circuit
         .inputs

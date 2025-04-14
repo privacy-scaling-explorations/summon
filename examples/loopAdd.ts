@@ -2,7 +2,7 @@
 
 const iterations = 3;
 
-export default function main(input: number) {
+export default function main(_io: Summon.IO, input: number) {
   let res = 0;
 
   for (let i = 0; i < iterations; i++) {

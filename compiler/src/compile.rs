@@ -1,6 +1,7 @@
 use std::{cell::RefCell, collections::BTreeMap, collections::HashMap, rc::Rc};
 
 use crate::asm::Module;
+use crate::summon_io::make_summon_io;
 use summon_vm::vs_value::{ToDynamicVal, Val, VsType};
 use summon_vm::{
   circuit::Circuit,
@@ -12,6 +13,7 @@ use summon_vm::{
   val_dynamic_downcast::val_dynamic_downcast,
   Bytecode, DecoderMaker,
 };
+use swc_common::DUMMY_SP;
 
 use crate::{
   asm, assembler::assemble, diagnostic::DiagnosticLevel, gather_modules, link_module, Diagnostic,
@@ -36,7 +38,11 @@ pub struct CompileLinkedModuleResult {
   pub diagnostics: HashMap<ResolvedPath, Vec<Diagnostic>>,
 }
 
-pub fn compile<ReadFile>(path: ResolvedPath, read_file: ReadFile) -> CompileResult
+pub fn compile<ReadFile>(
+  public_inputs: &HashMap<String, Val>,
+  path: ResolvedPath,
+  read_file: ReadFile,
+) -> CompileResult
 where
   ReadFile: Fn(&str) -> Result<String, String>,
 {
@@ -44,10 +50,25 @@ where
     name,
     main_asm,
     main,
-    diagnostics,
-  } = get_compile_artifacts(path, read_file)?;
+    mut diagnostics,
+  } = get_compile_artifacts(path.clone(), read_file)?;
 
-  let (input_len, outputs) = run(main);
+  let first_param_name = main_asm.parameters.first().map(|x| x.name.as_str());
+
+  if first_param_name != Some("io") && first_param_name != Some("_io") {
+    diagnostics.entry(path).or_default().push(Diagnostic {
+      level: DiagnosticLevel::Error,
+      message: "First parameter name of main function is not io or _io".to_string(),
+      span: DUMMY_SP,
+    });
+
+    return Err(CompileErr {
+      circuit: None,
+      diagnostics,
+    });
+  }
+
+  let (input_len, outputs) = run(public_inputs, main);
 
   let (output_ids, builder) = build(input_len, outputs);
   let circuit = generate_circuit(name, main_asm, output_ids, builder);
@@ -177,16 +198,16 @@ fn resolve_ptr<'a>(
   None
 }
 
-fn run(main: Val) -> (usize, Vec<Val>) {
+fn run(public_inputs: &HashMap<String, Val>, main: Val) -> (usize, Vec<Val>) {
   let param_count = match val_dynamic_downcast::<CsFunction>(&main) {
     Some(cs_fn) => cs_fn.parameter_count,
     None => panic!("Default export is not a regular function"),
   };
 
   let id_gen = Rc::new(RefCell::new(IdGenerator::new()));
-  let mut input_args = Vec::<Val>::new();
+  let mut input_args = vec![make_summon_io(public_inputs)];
 
-  for _ in 0..param_count {
+  for _ in 1..param_count {
     input_args.push(
       CircuitSignal::new(&id_gen, Some(VsType::Number), CircuitSignalData::Input).to_dynamic_val(),
     );
@@ -197,8 +218,8 @@ fn run(main: Val) -> (usize, Vec<Val>) {
   let res = vm.run(None, &mut Val::Undefined, main, input_args);
 
   match res {
-    Ok(Val::Array(vs_array)) => (param_count, vs_array.elements.clone()),
-    Ok(val) => (param_count, vec![val]),
+    Ok(Val::Array(vs_array)) => (param_count - 1, vs_array.elements.clone()),
+    Ok(val) => (param_count - 1, vec![val]),
     Err(err) => {
       eprintln!("Uncaught exception: {}", err.pretty());
       std::process::exit(1);
@@ -224,7 +245,7 @@ fn generate_circuit(
   builder: CircuitBuilder,
 ) -> Circuit {
   let mut inputs = BTreeMap::<String, usize>::new();
-  for (i, reg) in fn_.parameters.iter().enumerate() {
+  for (i, reg) in fn_.parameters.iter().skip(1).enumerate() {
     inputs.insert(reg.name.clone(), i);
   }
 
