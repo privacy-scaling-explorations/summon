@@ -14,7 +14,7 @@ use summon_vm::vs_value::Val;
 fn main() {
   let args: Vec<String> = std::env::args().collect();
 
-  if args.len() != 2 && args.len() != 4 {
+  if args.len() < 2 {
     eprintln!("Usage: summonc main.ts [--public-inputs json|FILE.json] [--boolify-width WIDTH]");
     std::process::exit(1);
   }

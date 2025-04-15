@@ -6,7 +6,9 @@ use std::{
 
 use num_bigint::BigInt;
 use summon_vm::{
+  circuit_signal::{CircuitSignal, CircuitSignalData},
   error_builtin::ToError,
+  id_generator::IdGenerator,
   internal_error_builtin::ToInternalError,
   native_function::{native_fn, NativeFunction},
   operations::op_triple_eq_impl,
@@ -14,7 +16,7 @@ use summon_vm::{
   val_dynamic_downcast::val_dynamic_downcast,
   vs_array::VsArray,
   vs_class::VsClass,
-  vs_value::{ToVal, Val, VsType},
+  vs_value::{ToDynamicVal, ToVal, Val, VsType},
   LoadFunctionResult, ValTrait,
 };
 
@@ -24,9 +26,12 @@ pub struct SummonIO {
 }
 
 impl SummonIO {
-  pub fn new(public_inputs: &HashMap<String, Val>) -> Self {
+  pub fn new(public_inputs: &HashMap<String, Val>, id_gen: &Rc<RefCell<IdGenerator>>) -> Self {
     Self {
       data: Rc::new(RefCell::new(SummonIOData {
+        id_gen: id_gen.clone(),
+        inputs: Vec::new(),
+        inputs_used: HashSet::new(),
         public_inputs: public_inputs.clone(),
         public_inputs_used: HashSet::new(),
         public_outputs: HashMap::new(),
@@ -43,9 +48,26 @@ impl SummonIO {
       .cloned()
       .collect()
   }
+
+  pub fn input_names(&self) -> Vec<String> {
+    let io_data = self.data.borrow();
+    io_data
+      .inputs
+      .iter()
+      .map(|(_, name, _)| name.clone())
+      .collect()
+  }
+
+  pub fn input_ids(&self) -> Vec<usize> {
+    let io_data = self.data.borrow();
+    io_data.inputs.iter().map(|(_, _, id)| *id).collect()
+  }
 }
 
 pub struct SummonIOData {
+  pub id_gen: Rc<RefCell<IdGenerator>>,
+  pub inputs: Vec<(String, String, usize)>, // (from, name, id)
+  pub inputs_used: HashSet<String>,
   pub public_inputs: HashMap<String, Val>,
   pub public_inputs_used: HashSet<String>,
   pub public_outputs: HashMap<String, Val>,
@@ -144,18 +166,18 @@ static INPUT: NativeFunction = native_fn(|this, params| {
     return Err("Expected this to be Summon.IO".to_type_error());
   };
 
-  let mut _io_data = io.data.borrow_mut();
+  let mut io_data = io.data.borrow_mut();
 
-  let (Some(from), Some(id), Some(type_)) = (params.first(), params.get(1), params.get(2)) else {
-    return Err("Params (from, id, type) not provided".to_type_error());
+  let (Some(from), Some(name), Some(type_)) = (params.first(), params.get(1), params.get(2)) else {
+    return Err("Params (from, name, type) not provided".to_type_error());
   };
 
-  let Val::String(_from) = from else {
+  let Val::String(from) = from else {
     return Err("Expected `from` to be a string".to_type_error());
   };
 
-  let Val::String(_id) = id else {
-    return Err("Expected `id` to be a string".to_type_error());
+  let Val::String(name) = name else {
+    return Err("Expected `name` to be a string".to_type_error());
   };
 
   let number_type = Val::make_object(&[
@@ -170,7 +192,23 @@ static INPUT: NativeFunction = native_fn(|this, params| {
     );
   };
 
-  Err("Not implemented yet: io.input".to_internal_error())
+  let signal = CircuitSignal::new(
+    &io_data.id_gen,
+    Some(VsType::Number),
+    CircuitSignalData::Input,
+  );
+
+  let newly_inserted = io_data.inputs_used.insert(name.to_string());
+
+  if !newly_inserted {
+    return Err(format!("Can't use existing input name: \"{}\"", name).to_error());
+  }
+
+  io_data
+    .inputs
+    .push((from.to_string(), name.to_string(), signal.id));
+
+  Ok(signal.to_dynamic_val())
 });
 
 static INPUT_PUBLIC: NativeFunction = native_fn(|this, params| {
@@ -182,12 +220,12 @@ static INPUT_PUBLIC: NativeFunction = native_fn(|this, params| {
 
   let mut io_data = io.data.borrow_mut();
 
-  let (Some(id), Some(type_)) = (params.first(), params.get(1)) else {
-    return Err("Params (id, type) not provided".to_type_error());
+  let (Some(name), Some(type_)) = (params.first(), params.get(1)) else {
+    return Err("Params (name, type) not provided".to_type_error());
   };
 
-  let Val::String(id) = id else {
-    return Err("Expected `id` to be a string".to_type_error());
+  let Val::String(name) = name else {
+    return Err("Expected `name` to be a string".to_type_error());
   };
 
   let number_type = Val::make_object(&[
@@ -202,13 +240,13 @@ static INPUT_PUBLIC: NativeFunction = native_fn(|this, params| {
     );
   };
 
-  let Some(value) = io_data.public_inputs.get(&id.to_string()) else {
-    return Err(format!("Missing public input: \"{}\"", id).to_error());
+  let Some(value) = io_data.public_inputs.get(&name.to_string()) else {
+    return Err(format!("Missing public input: \"{}\"", name).to_error());
   };
 
   let value = value.clone();
 
-  io_data.public_inputs_used.insert(id.to_string());
+  io_data.public_inputs_used.insert(name.to_string());
 
   Ok(value)
 });
@@ -222,8 +260,8 @@ static OUTPUT: NativeFunction = native_fn(|this, params| {
 
   let mut _io_data = io.data.borrow_mut();
 
-  let (Some(to), Some(id), Some(value)) = (params.first(), params.get(1), params.get(2)) else {
-    return Err("Params (to, id, value) not provided".to_type_error());
+  let (Some(to), Some(name), Some(value)) = (params.first(), params.get(1), params.get(2)) else {
+    return Err("Params (to, name, value) not provided".to_type_error());
   };
 
   let Val::String(_to) = to else {
@@ -232,8 +270,8 @@ static OUTPUT: NativeFunction = native_fn(|this, params| {
     );
   };
 
-  let Val::String(_id) = id else {
-    return Err("Expected `id` to be a string".to_type_error());
+  let Val::String(_id) = name else {
+    return Err("Expected `name` to be a string".to_type_error());
   };
 
   if value.typeof_() != VsType::Number {
@@ -252,19 +290,21 @@ static OUTPUT_PUBLIC: NativeFunction = native_fn(|this, params| {
 
   let mut io_data = io.data.borrow_mut();
 
-  let (Some(id), Some(value)) = (params.first(), params.get(1)) else {
-    return Err("Params (id, value) not provided".to_type_error());
+  let (Some(name), Some(value)) = (params.first(), params.get(1)) else {
+    return Err("Params (name, value) not provided".to_type_error());
   };
 
-  let Val::String(id) = id else {
-    return Err("Expected id to be a string".to_type_error());
+  let Val::String(name) = name else {
+    return Err("Expected name to be a string".to_type_error());
   };
 
   if value.typeof_() != VsType::Number {
     return Err("Non-number outputs are not yet supported".to_type_error());
   }
 
-  io_data.public_outputs.insert(id.to_string(), value.clone());
+  io_data
+    .public_outputs
+    .insert(name.to_string(), value.clone());
 
   Ok(Val::Undefined)
 });

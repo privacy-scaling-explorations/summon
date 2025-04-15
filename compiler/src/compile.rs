@@ -2,16 +2,10 @@ use std::{cell::RefCell, collections::BTreeMap, collections::HashMap, rc::Rc};
 
 use crate::asm::Module;
 use crate::summon_io::SummonIO;
-use summon_vm::vs_value::{ToDynamicVal, Val, VsType};
+use summon_vm::vs_value::{ToDynamicVal, Val};
 use summon_vm::{
-  circuit::Circuit,
-  circuit_builder::CircuitBuilder,
-  circuit_signal::{CircuitSignal, CircuitSignalData},
-  circuit_vm::CircuitVM,
-  cs_function::CsFunction,
-  id_generator::IdGenerator,
-  val_dynamic_downcast::val_dynamic_downcast,
-  Bytecode, DecoderMaker,
+  circuit::Circuit, circuit_builder::CircuitBuilder, circuit_vm::CircuitVM,
+  id_generator::IdGenerator, Bytecode, DecoderMaker,
 };
 use swc_common::DUMMY_SP;
 
@@ -52,12 +46,13 @@ where
     mut diagnostics,
   } = get_compile_artifacts(path.clone(), read_file)?;
 
-  let first_param_name = main_asm.parameters.first().map(|x| x.name.as_str());
-
-  if first_param_name != Some("io") && first_param_name != Some("_io") {
+  if main_asm.parameters.len() != 1 {
     diagnostics.entry(path).or_default().push(Diagnostic {
       level: DiagnosticLevel::Error,
-      message: "First parameter name of main function is not io or _io".to_string(),
+      message: format!(
+        "number of main function arguments ({}) is not 1",
+        main_asm.parameters.len()
+      ),
       span: DUMMY_SP,
     });
 
@@ -67,8 +62,9 @@ where
     });
   }
 
-  let io = SummonIO::new(public_inputs);
-  let input_len = run(main, &io);
+  let id_gen = Rc::new(RefCell::new(IdGenerator::new()));
+  let io = SummonIO::new(public_inputs, &id_gen);
+  run(main, &io);
 
   for unused_input in io.unused_public_inputs() {
     let unused_path = ResolvedPath {
@@ -85,8 +81,8 @@ where
       });
   }
 
-  let (outputs, builder) = build(input_len, io);
-  let circuit = generate_circuit(main_asm, outputs, builder);
+  let (input_names, outputs, builder) = build(io);
+  let circuit = generate_circuit(input_names, outputs, builder);
 
   if diagnostics.iter().any(|(_, path_diagnostics)| {
     path_diagnostics.iter().any(|diagnostic| {
@@ -206,24 +202,15 @@ fn resolve_ptr<'a>(
   None
 }
 
-fn run(main: Val, io: &SummonIO) -> usize {
-  let param_count = match val_dynamic_downcast::<CsFunction>(&main) {
-    Some(cs_fn) => cs_fn.parameter_count,
-    None => panic!("Default export is not a regular function"),
-  };
-
-  let id_gen = Rc::new(RefCell::new(IdGenerator::new()));
-  let mut input_args = vec![io.clone().to_dynamic_val()];
-
-  for _ in 1..param_count {
-    input_args.push(
-      CircuitSignal::new(&id_gen, Some(VsType::Number), CircuitSignalData::Input).to_dynamic_val(),
-    );
-  }
-
+fn run(main: Val, io: &SummonIO) {
   let mut vm = CircuitVM::default();
 
-  let res = vm.run(None, &mut Val::Undefined, main, input_args);
+  let res = vm.run(
+    None,
+    &mut Val::Undefined,
+    main,
+    vec![io.clone().to_dynamic_val()],
+  );
 
   match &res {
     Ok(Val::Void | Val::Undefined) => {}
@@ -235,32 +222,31 @@ fn run(main: Val, io: &SummonIO) -> usize {
       std::process::exit(1);
     }
   };
-
-  param_count - 1
 }
 
-fn build(input_len: usize, io: SummonIO) -> (BTreeMap<String, usize>, CircuitBuilder) {
+fn build(io: SummonIO) -> (Vec<String>, BTreeMap<String, usize>, CircuitBuilder) {
   let mut builder = CircuitBuilder::default();
-  builder.include_inputs(input_len);
+  builder.include_inputs(&io.input_ids());
 
   let io_data = io.data.borrow();
+  let input_names = io.input_names();
   let outputs = builder.include_outputs(&io_data.public_outputs);
 
   drop(io_data);
   drop(io);
   builder.drop_signal_data();
 
-  (outputs, builder)
+  (input_names, outputs, builder)
 }
 
 fn generate_circuit(
-  fn_: asm::Function,
+  input_names: Vec<String>,
   outputs: BTreeMap<String, usize>,
   builder: CircuitBuilder,
 ) -> Circuit {
   let mut inputs = BTreeMap::<String, usize>::new();
-  for (i, reg) in fn_.parameters.iter().skip(1).enumerate() {
-    inputs.insert(reg.name.clone(), i);
+  for (i, name) in input_names.into_iter().enumerate() {
+    inputs.insert(name, i);
   }
 
   let mut constants = BTreeMap::<usize, usize>::new();

@@ -21,16 +21,16 @@ declare const summon: {
 declare namespace Summon {
   export type IO = {
     /** Accept an input from a specific party. */
-    input<T>(from: string, id: string, type: Type<T>): T;
+    input<T>(from: string, name: string, type: Type<T>): T;
 
     /** Accept a compile-time input (all parties must provide the same value). */
-    inputPublic<T>(id: string, type: Type<T>): T;
+    inputPublic<T>(name: string, type: Type<T>): T;
 
     /** Provide an output visible only to a specific party or parties. */
-    output<T>(to: string | string[], id: string, value: T): void;
+    output<T>(to: string | string[], name: string, value: T): void;
 
     /** Provide an output visible to all parties. */
-    outputPublic<T>(id: string, value: T): void;
+    outputPublic<T>(name: string, value: T): void;
   };
 
   export type Type<T> = {

@@ -21,12 +21,13 @@ pub struct CircuitBuilder {
 }
 
 impl CircuitBuilder {
-  pub fn include_inputs(&mut self, input_len: usize) {
-    for i in 0..input_len {
-      self.wires_included.insert(i, i);
+  pub fn include_inputs(&mut self, input_ids: &[usize]) {
+    for (i, input_id) in input_ids.iter().enumerate() {
+      let prev = self.wires_included.insert(*input_id, i);
+      assert!(prev.is_none());
     }
 
-    self.wire_count = input_len;
+    self.wire_count = input_ids.len();
   }
 
   pub fn include_outputs(&mut self, output_vals: &HashMap<String, Val>) -> BTreeMap<String, usize> {
@@ -38,8 +39,8 @@ impl CircuitBuilder {
 
     let mut outputs = BTreeMap::<String, usize>::new();
 
-    for (label, output) in output_vals {
-      outputs.insert(label.clone(), self.include_val(output));
+    for (name, output) in output_vals {
+      outputs.insert(name.clone(), self.include_val(output));
     }
 
     outputs
@@ -108,7 +109,7 @@ impl CircuitBuilder {
     let wire_id = self.allocate_wire(Some(signal));
 
     let gate = match &signal.data {
-      CircuitSignalData::Input => panic!("Input should have been included earlier"),
+      CircuitSignalData::Input { .. } => panic!("Input should have been included earlier"),
       CircuitSignalData::UnaryOp(op, _) => Gate::Unary {
         op: *op,
         input: dependent_ids[0],
@@ -261,7 +262,7 @@ fn as_circuit_signal(val: &Val) -> Option<&CircuitSignal> {
 
 fn get_signal_dependencies(signal: &CircuitSignal) -> Vec<Val> {
   match &signal.data {
-    CircuitSignalData::Input => vec![],
+    CircuitSignalData::Input { .. } => vec![],
     CircuitSignalData::UnaryOp(_, input) => {
       vec![input.clone()]
     }

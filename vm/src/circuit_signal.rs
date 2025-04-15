@@ -1,6 +1,5 @@
 use std::{cell::RefCell, rc::Rc};
 
-use num_bigint::BigInt;
 use crate::{
   binary_op::BinaryOp,
   operations::op_or,
@@ -9,9 +8,10 @@ use crate::{
   vs_value::{ToDynamicVal, ToVal, Val},
   LoadFunctionResult, ValTrait,
 };
+use num_bigint::BigInt;
 
-use crate::{id_generator::IdGenerator, val_dynamic_downcast::val_dynamic_downcast};
 use crate::vs_value::VsType;
+use crate::{id_generator::IdGenerator, val_dynamic_downcast::val_dynamic_downcast};
 
 #[derive(Clone)]
 pub enum CircuitSignalData {
@@ -296,7 +296,7 @@ impl std::fmt::Display for CircuitSignal {
 
 fn typeof_(data: &CircuitSignalData) -> VsType {
   match data {
-    CircuitSignalData::Input => VsType::Number,
+    CircuitSignalData::Input { .. } => VsType::Number,
     CircuitSignalData::UnaryOp(op, _) => match op {
       UnaryOp::Plus => VsType::Number,
       UnaryOp::Minus => VsType::Number,
