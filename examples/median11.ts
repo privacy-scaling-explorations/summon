@@ -2,31 +2,12 @@
 
 import median from "./lib/median.ts";
 
-export default function median11(
-  _io: Summon.IO,
-  x0: number,
-  x1: number,
-  x2: number,
-  x3: number,
-  x4: number,
-  x5: number,
-  x6: number,
-  x7: number,
-  x8: number,
-  x9: number,
-  x10: number,
-) {
-  return median([
-    x0,
-    x1,
-    x2,
-    x3,
-    x4,
-    x5,
-    x6,
-    x7,
-    x8,
-    x9,
-    x10,
-  ]);
+export default function median11(io: Summon.IO) {
+  let x: number[] = [];
+
+  for (let i = 0; i < 11; i++) {
+    x.push(io.input(`party${i}`, `x${i}`, summon.number()));
+  }
+
+  io.outputPublic('median', median(x));
 }

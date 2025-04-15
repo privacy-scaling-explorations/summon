@@ -54,7 +54,12 @@ mod tests_ {
 
       for (name, value) in &outputs {
         let wire_id = output_name_to_index[name];
-        assert_eq!(*value, expected_output[wire_id]);
+
+        assert_eq!(
+          *value, expected_output[wire_id],
+          "Output mismatch for {}: expected {}, got {}",
+          name, expected_output[wire_id], value
+        );
       }
     }
   }

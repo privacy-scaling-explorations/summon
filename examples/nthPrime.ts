@@ -7,7 +7,13 @@
 
 const limit = 10;
 
-export default function main(_io: Summon.IO, n: number) {
+export default (io: Summon.IO) => {
+  const n = io.input('alice', 'n', summon.number());
+
+  io.outputPublic('p', nthPrime(n));
+};
+
+function nthPrime(n: number) {
   let p = 0;
   let i = 0;
 
