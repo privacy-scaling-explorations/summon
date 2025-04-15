@@ -1,3 +1,4 @@
+use std::mem::take;
 use std::{cell::RefCell, collections::BTreeMap, collections::HashMap, rc::Rc};
 
 use crate::asm::Module;
@@ -83,8 +84,8 @@ where
       });
   }
 
-  let (input_descriptors, outputs, builder) = build(io);
-  let circuit = generate_circuit(input_descriptors, outputs, builder);
+  let (parties, input_descriptors, outputs, builder) = build(io);
+  let circuit = generate_circuit(parties, input_descriptors, outputs, builder);
 
   if diagnostics.iter().any(|(_, path_diagnostics)| {
     path_diagnostics.iter().any(|diagnostic| {
@@ -229,6 +230,7 @@ fn run(main: Val, io: &SummonIO) {
 fn build(
   io: SummonIO,
 ) -> (
+  Vec<String>,
   Vec<InputDescriptor>,
   BTreeMap<String, usize>,
   CircuitBuilder,
@@ -236,18 +238,20 @@ fn build(
   let mut builder = CircuitBuilder::default();
   builder.include_inputs(&io.input_ids());
 
-  let io_data = io.data.borrow();
-  let input_descriptors = io_data.inputs.clone();
+  let mut io_data = io.data.borrow_mut();
+  let parties = take(&mut io_data.parties);
+  let input_descriptors = take(&mut io_data.inputs);
   let outputs = builder.include_outputs(&io_data.public_outputs);
 
   drop(io_data);
   drop(io);
   builder.drop_signal_data();
 
-  (input_descriptors, outputs, builder)
+  (parties, input_descriptors, outputs, builder)
 }
 
 fn generate_circuit(
+  parties: Vec<String>,
   input_descriptors: Vec<InputDescriptor>,
   outputs: BTreeMap<String, usize>,
   builder: CircuitBuilder,
@@ -269,7 +273,7 @@ fn generate_circuit(
     inputs,
     constants,
     outputs,
-    mpc_settings: MpcSettings::from_io(&input_descriptors, outputs_vec),
+    mpc_settings: MpcSettings::from_io(&parties, &input_descriptors, outputs_vec),
     gates: builder.gates,
   }
 }

@@ -27,19 +27,26 @@ pub struct MpcParticipantSettings {
 pub struct MpcSettings(Vec<MpcParticipantSettings>);
 
 impl MpcSettings {
-  pub fn from_io(input_descriptors: &[InputDescriptor], outputs: Vec<String>) -> Self {
-    let mut participants = Vec::<MpcParticipantSettings>::new();
+  pub fn from_io(
+    parties: &[String],
+    input_descriptors: &[InputDescriptor],
+    outputs: Vec<String>,
+  ) -> Self {
+    let mut participants = parties
+      .iter()
+      .map(|name| MpcParticipantSettings {
+        name: name.clone(),
+        inputs: vec![],
+        outputs: vec![],
+      })
+      .collect::<Vec<_>>();
 
     for desc in input_descriptors {
-      if let Some(participant) = participants.iter_mut().find(|p| p.name == desc.from) {
-        participant.inputs.push(desc.name.clone());
-      } else {
-        participants.push(MpcParticipantSettings {
-          name: desc.from.clone(),
-          inputs: vec![desc.name.clone()],
-          outputs: vec![],
-        });
-      }
+      let Some(participant) = participants.iter_mut().find(|p| p.name == desc.from) else {
+        panic!("Participant {} not found", desc.from);
+      };
+
+      participant.inputs.push(desc.name.clone());
     }
 
     for participant in &mut participants {

@@ -36,6 +36,7 @@ impl SummonIO {
         public_inputs: public_inputs.clone(),
         public_inputs_used: HashSet::new(),
         public_outputs: HashMap::new(),
+        parties: Vec::new(),
       })),
     }
   }
@@ -63,6 +64,17 @@ pub struct SummonIOData {
   pub public_inputs: HashMap<String, Val>,
   pub public_inputs_used: HashSet<String>,
   pub public_outputs: HashMap<String, Val>,
+  pub parties: Vec<String>,
+}
+
+impl SummonIOData {
+  pub fn add_party(&mut self, party: String) {
+    if self.parties.contains(&party) {
+      return;
+    }
+
+    self.parties.push(party.clone());
+  }
 }
 
 impl ValTrait for SummonIO {
@@ -120,6 +132,7 @@ impl ValTrait for SummonIO {
       "inputPublic" => Ok(INPUT_PUBLIC.to_val()),
       "output" => Ok(OUTPUT.to_val()),
       "outputPublic" => Ok(OUTPUT_PUBLIC.to_val()),
+      "addParty" => Ok(ADD_PARTY.to_val()),
       _ => Ok(Val::Undefined),
     }
   }
@@ -196,11 +209,15 @@ static INPUT: NativeFunction = native_fn(|this, params| {
     return Err(format!("Can't use existing input name: \"{}\"", name).to_error());
   }
 
+  let from = from.to_string();
+
   io_data.inputs.push(InputDescriptor {
-    from: from.to_string(),
+    from: from.clone(),
     name: name.to_string(),
     id: signal.id,
   });
+
+  io_data.add_party(from);
 
   Ok(signal.to_dynamic_val())
 });
@@ -272,6 +289,12 @@ static OUTPUT: NativeFunction = native_fn(|this, params| {
     return Err("Non-number outputs are not yet supported".to_type_error());
   }
 
+  // _io_data.add_party(to.to_string());
+
+  // Note: This is actually very simple to implement within Summon. All we have to do is track this
+  // and change mpcSettings to only list this output for that party instead of everyone. The tricky
+  // part is having a backend that supports it. Implementing this without a backend implementation
+  // would just be confusing.
   Err("Not implemented yet: io.output".to_internal_error())
 });
 
@@ -299,6 +322,28 @@ static OUTPUT_PUBLIC: NativeFunction = native_fn(|this, params| {
   io_data
     .public_outputs
     .insert(name.to_string(), value.clone());
+
+  Ok(Val::Undefined)
+});
+
+static ADD_PARTY: NativeFunction = native_fn(|this, params| {
+  let this_val = this.get();
+
+  let Some(io) = val_dynamic_downcast::<SummonIO>(&this_val) else {
+    return Err("Expected this to be Summon.IO".to_type_error());
+  };
+
+  let mut io_data = io.data.borrow_mut();
+
+  let Some(party) = params.first() else {
+    return Err("Params (party) not provided".to_type_error());
+  };
+
+  let Val::String(party) = party else {
+    return Err("Expected `party` to be a string".to_type_error());
+  };
+
+  io_data.add_party(party.to_string());
 
   Ok(Val::Undefined)
 });

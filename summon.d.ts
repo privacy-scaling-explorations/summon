@@ -31,6 +31,15 @@ declare namespace Summon {
 
     /** Provide an output visible to all parties. */
     outputPublic<T>(name: string, value: T): void;
+
+    /**
+     * Explicitly add an MPC party.
+     *
+     * Usually parties are inferred from inputs and outputs, but you can also have parties with no
+     * inputs and only receive public outputs. Use this method to declare them so they will be
+     * included in mpcSettings.
+     */
+    addParty(name: string): void;
   };
 
   export type Type<T> = {
