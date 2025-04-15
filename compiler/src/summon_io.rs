@@ -102,8 +102,8 @@ impl ValTrait for SummonIO {
     };
 
     match key.as_ref() {
-      "publicInput" => Ok(PUBLIC_INPUT.to_val()),
-      "publicOutput" => Ok(PUBLIC_OUTPUT.to_val()),
+      "inputPublic" => Ok(INPUT_PUBLIC.to_val()),
+      "outputPublic" => Ok(OUTPUT_PUBLIC.to_val()),
       _ => Ok(Val::Undefined),
     }
   }
@@ -135,7 +135,7 @@ impl std::fmt::Display for SummonIO {
   }
 }
 
-static PUBLIC_INPUT: NativeFunction = native_fn(|this, params| {
+static INPUT_PUBLIC: NativeFunction = native_fn(|this, params| {
   let this_val = this.get();
 
   let Some(io) = val_dynamic_downcast::<SummonIO>(&this_val) else {
@@ -175,7 +175,7 @@ static PUBLIC_INPUT: NativeFunction = native_fn(|this, params| {
   Ok(value)
 });
 
-static PUBLIC_OUTPUT: NativeFunction = native_fn(|this, params| {
+static OUTPUT_PUBLIC: NativeFunction = native_fn(|this, params| {
   let this_val = this.get();
 
   let Some(io) = val_dynamic_downcast::<SummonIO>(&this_val) else {

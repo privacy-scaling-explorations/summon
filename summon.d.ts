@@ -1,15 +1,36 @@
 declare const summon: {
+  /**
+   * Tests whether the provided `value` is a signal.
+   *
+   * Signals are used to generate circuits during partial evaluation by representing computations
+   * over unknown values.
+   *
+   *     const x = summon.inputPublic('x', summon.number());
+   *     const y = 17;
+   *
+   *     summon.isSignal(x); // true
+   *     summon.isSignal(y); // false
+   *     summon.isSignal(x + y); // true
+   */
   isSignal(value: unknown): boolean;
+
+  /** Produces a runtime value that models the type `number`. */
   number(): Summon.Type<number>;
 };
 
 declare namespace Summon {
   export type IO = {
+    /** Accept an input from a specific party. */
     input<T>(from: string, id: string, type: Type<T>): T;
-    output<T>(to: string, id: string, value: T): void;
 
-    publicInput<T>(id: string, type: Type<T>): T;
-    publicOutput<T>(id: string, value: T): void;
+    /** Accept a compile-time input (all parties must provide the same value). */
+    inputPublic<T>(id: string, type: Type<T>): T;
+
+    /** Provide an output visible only to a specific party or parties. */
+    output<T>(to: string | string[], id: string, value: T): void;
+
+    /** Provide an output visible to all parties. */
+    outputPublic<T>(id: string, value: T): void;
   };
 
   export type Type<T> = {
