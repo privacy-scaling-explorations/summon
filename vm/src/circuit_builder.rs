@@ -29,20 +29,20 @@ impl CircuitBuilder {
     self.wire_count = input_len;
   }
 
-  pub fn include_outputs(&mut self, outputs: &Vec<Val>) -> Vec<usize> {
-    for output in outputs {
+  pub fn include_outputs(&mut self, output_vals: &HashMap<String, Val>) -> BTreeMap<String, usize> {
+    for output in output_vals.values() {
       for dep in get_dependencies(output) {
         self.include_val(&dep);
       }
     }
 
-    let mut output_ids = vec![];
+    let mut outputs = BTreeMap::<String, usize>::new();
 
-    for output in outputs {
-      output_ids.push(self.include_val(output));
+    for (label, output) in output_vals {
+      outputs.insert(label.clone(), self.include_val(output));
     }
 
-    output_ids
+    outputs
   }
 
   pub fn include_val(&mut self, val: &Val) -> usize {

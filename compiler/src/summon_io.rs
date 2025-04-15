@@ -29,6 +29,7 @@ impl SummonIO {
       data: Rc::new(RefCell::new(SummonIOData {
         public_inputs: public_inputs.clone(),
         public_inputs_used: HashSet::new(),
+        public_outputs: HashMap::new(),
       })),
     }
   }
@@ -47,6 +48,7 @@ impl SummonIO {
 pub struct SummonIOData {
   pub public_inputs: HashMap<String, Val>,
   pub public_inputs_used: HashSet<String>,
+  pub public_outputs: HashMap<String, Val>,
 }
 
 impl ValTrait for SummonIO {
@@ -101,6 +103,7 @@ impl ValTrait for SummonIO {
 
     match key.as_ref() {
       "publicInput" => Ok(PUBLIC_INPUT.to_val()),
+      "publicOutput" => Ok(PUBLIC_OUTPUT.to_val()),
       _ => Ok(Val::Undefined),
     }
   }
@@ -136,7 +139,7 @@ static PUBLIC_INPUT: NativeFunction = native_fn(|this, params| {
   let this_val = this.get();
 
   let Some(io) = val_dynamic_downcast::<SummonIO>(&this_val) else {
-    todo!()
+    return Err("Expected this to be Summon.IO".to_type_error());
   };
 
   let mut io_data = io.data.borrow_mut();
@@ -170,4 +173,30 @@ static PUBLIC_INPUT: NativeFunction = native_fn(|this, params| {
   io_data.public_inputs_used.insert(id.to_string());
 
   Ok(value)
+});
+
+static PUBLIC_OUTPUT: NativeFunction = native_fn(|this, params| {
+  let this_val = this.get();
+
+  let Some(io) = val_dynamic_downcast::<SummonIO>(&this_val) else {
+    return Err("Expected this to be Summon.IO".to_type_error());
+  };
+
+  let mut io_data = io.data.borrow_mut();
+
+  let (Some(id), Some(value)) = (params.first(), params.get(1)) else {
+    return Err("Params (id, value) not provided".to_type_error());
+  };
+
+  let Val::String(id) = id else {
+    return Err("Expected id to be a string".to_type_error());
+  };
+
+  if value.typeof_() != VsType::Number {
+    return Err("Non-number outputs are not yet supported".to_type_error());
+  }
+
+  io_data.public_outputs.insert(id.to_string(), value.clone());
+
+  Ok(Val::Undefined)
 });

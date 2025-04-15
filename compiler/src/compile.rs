@@ -47,7 +47,6 @@ where
   ReadFile: Fn(&str) -> Result<String, String>,
 {
   let CompileArtifacts {
-    name,
     main_asm,
     main,
     mut diagnostics,
@@ -69,7 +68,7 @@ where
   }
 
   let io = SummonIO::new(public_inputs);
-  let (input_len, outputs) = run(main, &io.clone().to_dynamic_val());
+  let input_len = run(main, &io);
 
   for unused_input in io.unused_public_inputs() {
     let unused_path = ResolvedPath {
@@ -86,8 +85,8 @@ where
       });
   }
 
-  let (output_ids, builder) = build(input_len, outputs);
-  let circuit = generate_circuit(name, main_asm, output_ids, builder);
+  let (outputs, builder) = build(input_len, io);
+  let circuit = generate_circuit(main_asm, outputs, builder);
 
   if diagnostics.iter().any(|(_, path_diagnostics)| {
     path_diagnostics.iter().any(|diagnostic| {
@@ -134,7 +133,6 @@ where
 }
 
 struct CompileArtifacts {
-  name: String,
   main_asm: asm::Function,
   main: Val,
   diagnostics: HashMap<ResolvedPath, Vec<Diagnostic>>,
@@ -168,21 +166,20 @@ where
     }
   };
 
-  let (name, asm_fn) = get_asm_main(&module);
+  let asm_fn = get_asm_main(&module);
 
   let bytecode = Rc::new(Bytecode::new(assemble(&module)));
 
   let val = bytecode.decoder(0).decode_val(&mut vec![]);
 
   Ok(CompileArtifacts {
-    name: name.clone(),
     main_asm: asm_fn.clone(),
     main: val,
     diagnostics,
   })
 }
 
-fn get_asm_main(module: &asm::Module) -> (&String, &asm::Function) {
+fn get_asm_main(module: &asm::Module) -> &asm::Function {
   let main_ptr = match &module.export_default {
     asm::Value::Pointer(ptr) => ptr,
     _ => panic!("Expected pointer"),
@@ -193,12 +190,7 @@ fn get_asm_main(module: &asm::Module) -> (&String, &asm::Function) {
     _ => panic!("Expected function"),
   };
 
-  let meta = match resolve_ptr(module, fn_.meta.as_ref().unwrap()).unwrap() {
-    asm::DefinitionContent::Meta(meta) => meta,
-    _ => panic!("Expected meta"),
-  };
-
-  (&meta.name, fn_)
+  fn_
 }
 
 fn resolve_ptr<'a>(
@@ -214,14 +206,14 @@ fn resolve_ptr<'a>(
   None
 }
 
-fn run(main: Val, io: &Val) -> (usize, Vec<Val>) {
+fn run(main: Val, io: &SummonIO) -> usize {
   let param_count = match val_dynamic_downcast::<CsFunction>(&main) {
     Some(cs_fn) => cs_fn.parameter_count,
     None => panic!("Default export is not a regular function"),
   };
 
   let id_gen = Rc::new(RefCell::new(IdGenerator::new()));
-  let mut input_args = vec![io.clone()];
+  let mut input_args = vec![io.clone().to_dynamic_val()];
 
   for _ in 1..param_count {
     input_args.push(
@@ -233,31 +225,37 @@ fn run(main: Val, io: &Val) -> (usize, Vec<Val>) {
 
   let res = vm.run(None, &mut Val::Undefined, main, input_args);
 
-  match res {
-    Ok(Val::Array(vs_array)) => (param_count - 1, vs_array.elements.clone()),
-    Ok(val) => (param_count - 1, vec![val]),
+  match &res {
+    Ok(Val::Void | Val::Undefined) => {}
+    Ok(return_value) => {
+      println!("Program output: {}", return_value.pretty());
+    }
     Err(err) => {
       eprintln!("Uncaught exception: {}", err.pretty());
       std::process::exit(1);
     }
-  }
+  };
+
+  param_count - 1
 }
 
-fn build(input_len: usize, outputs: Vec<Val>) -> (Vec<usize>, CircuitBuilder) {
+fn build(input_len: usize, io: SummonIO) -> (BTreeMap<String, usize>, CircuitBuilder) {
   let mut builder = CircuitBuilder::default();
   builder.include_inputs(input_len);
-  let output_ids = builder.include_outputs(&outputs);
 
-  drop(outputs);
+  let io_data = io.data.borrow();
+  let outputs = builder.include_outputs(&io_data.public_outputs);
+
+  drop(io_data);
+  drop(io);
   builder.drop_signal_data();
 
-  (output_ids, builder)
+  (outputs, builder)
 }
 
 fn generate_circuit(
-  name: String,
   fn_: asm::Function,
-  output_ids: Vec<usize>,
+  outputs: BTreeMap<String, usize>,
   builder: CircuitBuilder,
 ) -> Circuit {
   let mut inputs = BTreeMap::<String, usize>::new();
@@ -268,15 +266,6 @@ fn generate_circuit(
   let mut constants = BTreeMap::<usize, usize>::new();
   for (value, wire_id) in &builder.constants {
     constants.insert(*wire_id, *value);
-  }
-
-  let mut outputs = BTreeMap::<String, usize>::new();
-  if output_ids.len() == 1 {
-    outputs.insert(name, output_ids[0]);
-  } else {
-    for (i, output_id) in output_ids.iter().enumerate() {
-      outputs.insert(format!("{}[{}]", name, i), *output_id);
-    }
   }
 
   Circuit {
