@@ -12,7 +12,7 @@ declare namespace Summon {
     publicOutput<T>(id: string, value: T): void;
   };
 
-  type Type<T> = {
+  export type Type<T> = {
     about: 'summon runtime type',
     json: unknown,
 
@@ -20,4 +20,6 @@ declare namespace Summon {
     // actually be present.
     _typeCheck?: (x: T) => T,
   };
+
+  export type TypeOf<T> = T extends Type<infer U> ? U : never;
 }
