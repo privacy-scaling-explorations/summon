@@ -5,6 +5,7 @@ use std::{
 };
 
 use num_bigint::BigInt;
+use summon_common::InputDescriptor;
 use summon_vm::{
   circuit_signal::{CircuitSignal, CircuitSignalData},
   error_builtin::ToError,
@@ -49,24 +50,15 @@ impl SummonIO {
       .collect()
   }
 
-  pub fn input_names(&self) -> Vec<String> {
-    let io_data = self.data.borrow();
-    io_data
-      .inputs
-      .iter()
-      .map(|(_, name, _)| name.clone())
-      .collect()
-  }
-
   pub fn input_ids(&self) -> Vec<usize> {
     let io_data = self.data.borrow();
-    io_data.inputs.iter().map(|(_, _, id)| *id).collect()
+    io_data.inputs.iter().map(|input| input.id).collect()
   }
 }
 
 pub struct SummonIOData {
   pub id_gen: Rc<RefCell<IdGenerator>>,
-  pub inputs: Vec<(String, String, usize)>, // (from, name, id)
+  pub inputs: Vec<InputDescriptor>,
   pub inputs_used: HashSet<String>,
   pub public_inputs: HashMap<String, Val>,
   pub public_inputs_used: HashSet<String>,
@@ -204,9 +196,11 @@ static INPUT: NativeFunction = native_fn(|this, params| {
     return Err(format!("Can't use existing input name: \"{}\"", name).to_error());
   }
 
-  io_data
-    .inputs
-    .push((from.to_string(), name.to_string(), signal.id));
+  io_data.inputs.push(InputDescriptor {
+    from: from.to_string(),
+    name: name.to_string(),
+    id: signal.id,
+  });
 
   Ok(signal.to_dynamic_val())
 });

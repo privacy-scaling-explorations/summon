@@ -121,4 +121,11 @@ fn main() {
   )
   .unwrap();
   println!("output/circuit_info.json");
+
+  fs::write(
+    "output/mpc_settings.json",
+    to_string_pretty(&circuit.mpc_settings).unwrap(),
+  )
+  .unwrap();
+  println!("output/mpc_settings.json");
 }

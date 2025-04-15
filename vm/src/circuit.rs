@@ -2,16 +2,52 @@ use std::{cmp::max, collections::BTreeMap};
 
 use crate::{binary_op::BinaryOp, unary_op::UnaryOp};
 use bristol_circuit::{BristolCircuit, CircuitInfo, ConstantInfo, Gate as BristolGate};
+use summon_common::InputDescriptor;
 
 use crate::bristol_op_strings::{to_bristol_binary_op, to_bristol_unary_op};
 
-#[derive(Default, Debug)]
+#[derive(Debug)]
 pub struct Circuit {
   pub size: usize,
   pub inputs: BTreeMap<String, usize>,
   pub constants: BTreeMap<usize, usize>, // wire_id -> value
   pub outputs: BTreeMap<String, usize>,
+  pub mpc_settings: MpcSettings,
   pub gates: Vec<Gate>,
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct MpcParticipantSettings {
+  pub name: String,
+  pub inputs: Vec<String>,
+  pub outputs: Vec<String>,
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct MpcSettings(Vec<MpcParticipantSettings>);
+
+impl MpcSettings {
+  pub fn from_io(input_descriptors: &[InputDescriptor], outputs: Vec<String>) -> Self {
+    let mut participants = Vec::<MpcParticipantSettings>::new();
+
+    for desc in input_descriptors {
+      if let Some(participant) = participants.iter_mut().find(|p| p.name == desc.from) {
+        participant.inputs.push(desc.name.clone());
+      } else {
+        participants.push(MpcParticipantSettings {
+          name: desc.from.clone(),
+          inputs: vec![desc.name.clone()],
+          outputs: vec![],
+        });
+      }
+    }
+
+    for participant in &mut participants {
+      participant.outputs = outputs.clone();
+    }
+
+    Self(participants)
+  }
 }
 
 #[derive(Debug)]

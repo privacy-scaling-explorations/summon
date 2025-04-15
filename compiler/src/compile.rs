@@ -2,6 +2,8 @@ use std::{cell::RefCell, collections::BTreeMap, collections::HashMap, rc::Rc};
 
 use crate::asm::Module;
 use crate::summon_io::SummonIO;
+use summon_common::InputDescriptor;
+use summon_vm::circuit::MpcSettings;
 use summon_vm::vs_value::{ToDynamicVal, Val};
 use summon_vm::{
   circuit::Circuit, circuit_builder::CircuitBuilder, circuit_vm::CircuitVM,
@@ -81,8 +83,8 @@ where
       });
   }
 
-  let (input_names, outputs, builder) = build(io);
-  let circuit = generate_circuit(input_names, outputs, builder);
+  let (input_descriptors, outputs, builder) = build(io);
+  let circuit = generate_circuit(input_descriptors, outputs, builder);
 
   if diagnostics.iter().any(|(_, path_diagnostics)| {
     path_diagnostics.iter().any(|diagnostic| {
@@ -224,29 +226,35 @@ fn run(main: Val, io: &SummonIO) {
   };
 }
 
-fn build(io: SummonIO) -> (Vec<String>, BTreeMap<String, usize>, CircuitBuilder) {
+fn build(
+  io: SummonIO,
+) -> (
+  Vec<InputDescriptor>,
+  BTreeMap<String, usize>,
+  CircuitBuilder,
+) {
   let mut builder = CircuitBuilder::default();
   builder.include_inputs(&io.input_ids());
 
   let io_data = io.data.borrow();
-  let input_names = io.input_names();
+  let input_descriptors = io_data.inputs.clone();
   let outputs = builder.include_outputs(&io_data.public_outputs);
 
   drop(io_data);
   drop(io);
   builder.drop_signal_data();
 
-  (input_names, outputs, builder)
+  (input_descriptors, outputs, builder)
 }
 
 fn generate_circuit(
-  input_names: Vec<String>,
+  input_descriptors: Vec<InputDescriptor>,
   outputs: BTreeMap<String, usize>,
   builder: CircuitBuilder,
 ) -> Circuit {
   let mut inputs = BTreeMap::<String, usize>::new();
-  for (i, name) in input_names.into_iter().enumerate() {
-    inputs.insert(name, i);
+  for (i, desc) in input_descriptors.iter().enumerate() {
+    inputs.insert(desc.name.clone(), i);
   }
 
   let mut constants = BTreeMap::<usize, usize>::new();
@@ -254,11 +262,14 @@ fn generate_circuit(
     constants.insert(*wire_id, *value);
   }
 
+  let outputs_vec = outputs.keys().cloned().collect::<Vec<_>>();
+
   Circuit {
     size: builder.wire_count,
     inputs,
     constants,
     outputs,
+    mpc_settings: MpcSettings::from_io(&input_descriptors, outputs_vec),
     gates: builder.gates,
   }
 }

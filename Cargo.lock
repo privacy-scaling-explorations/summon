@@ -1412,6 +1412,7 @@ dependencies = [
  "num-bigint",
  "num-derive",
  "num-traits",
+ "serde",
  "serde_json",
  "summon_common",
 ]
