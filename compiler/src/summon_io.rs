@@ -102,7 +102,9 @@ impl ValTrait for SummonIO {
     };
 
     match key.as_ref() {
+      "input" => Ok(INPUT.to_val()),
       "inputPublic" => Ok(INPUT_PUBLIC.to_val()),
+      "output" => Ok(OUTPUT.to_val()),
       "outputPublic" => Ok(OUTPUT_PUBLIC.to_val()),
       _ => Ok(Val::Undefined),
     }
@@ -135,6 +137,42 @@ impl std::fmt::Display for SummonIO {
   }
 }
 
+static INPUT: NativeFunction = native_fn(|this, params| {
+  let this_val = this.get();
+
+  let Some(io) = val_dynamic_downcast::<SummonIO>(&this_val) else {
+    return Err("Expected this to be Summon.IO".to_type_error());
+  };
+
+  let mut _io_data = io.data.borrow_mut();
+
+  let (Some(from), Some(id), Some(type_)) = (params.first(), params.get(1), params.get(2)) else {
+    return Err("Params (from, id, type) not provided".to_type_error());
+  };
+
+  let Val::String(_from) = from else {
+    return Err("Expected `from` to be a string".to_type_error());
+  };
+
+  let Val::String(_id) = id else {
+    return Err("Expected `id` to be a string".to_type_error());
+  };
+
+  let number_type = Val::make_object(&[
+    ("about", "summon runtime type".to_val()),
+    ("json", "number".to_val()),
+  ]);
+
+  let Ok(true) = op_triple_eq_impl(type_, &number_type) else {
+    return Err(
+      "Not implemented yet: type passed to io.input was something other than summon.number()"
+        .to_internal_error(),
+    );
+  };
+
+  Err("Not implemented yet: io.input".to_internal_error())
+});
+
 static INPUT_PUBLIC: NativeFunction = native_fn(|this, params| {
   let this_val = this.get();
 
@@ -149,7 +187,7 @@ static INPUT_PUBLIC: NativeFunction = native_fn(|this, params| {
   };
 
   let Val::String(id) = id else {
-    return Err("Expected id to be a string".to_type_error());
+    return Err("Expected `id` to be a string".to_type_error());
   };
 
   let number_type = Val::make_object(&[
@@ -173,6 +211,36 @@ static INPUT_PUBLIC: NativeFunction = native_fn(|this, params| {
   io_data.public_inputs_used.insert(id.to_string());
 
   Ok(value)
+});
+
+static OUTPUT: NativeFunction = native_fn(|this, params| {
+  let this_val = this.get();
+
+  let Some(io) = val_dynamic_downcast::<SummonIO>(&this_val) else {
+    return Err("Expected this to be Summon.IO".to_type_error());
+  };
+
+  let mut _io_data = io.data.borrow_mut();
+
+  let (Some(to), Some(id), Some(value)) = (params.first(), params.get(1), params.get(2)) else {
+    return Err("Params (to, id, value) not provided".to_type_error());
+  };
+
+  let Val::String(_to) = to else {
+    return Err(
+      "Expected `to` to be a string (not implemented yet: array of strings)".to_type_error(),
+    );
+  };
+
+  let Val::String(_id) = id else {
+    return Err("Expected `id` to be a string".to_type_error());
+  };
+
+  if value.typeof_() != VsType::Number {
+    return Err("Non-number outputs are not yet supported".to_type_error());
+  }
+
+  Err("Not implemented yet: io.output".to_internal_error())
 });
 
 static OUTPUT_PUBLIC: NativeFunction = native_fn(|this, params| {
