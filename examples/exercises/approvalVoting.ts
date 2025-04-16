@@ -20,7 +20,7 @@ export default function main(io: Summon.IO) {
   const N = io.inputPublic('N', summon.number());
   const ballots = range(0, N).map(i => inputBallot(io, i));
 
-  io.outputPublic('result', impl(ballots) ? 1 : 0);
+  io.outputPublic('result', impl(ballots));
 }
 
 // Extension: Use another public input to allow any number of options (more restaurants to choose
