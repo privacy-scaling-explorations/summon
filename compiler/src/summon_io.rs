@@ -35,7 +35,7 @@ impl SummonIO {
         inputs_used: HashSet::new(),
         public_inputs: public_inputs.clone(),
         public_inputs_used: HashSet::new(),
-        public_outputs: HashMap::new(),
+        public_outputs: Vec::new(),
         parties: Vec::new(),
       })),
     }
@@ -63,7 +63,7 @@ pub struct SummonIOData {
   pub inputs_used: HashSet<String>,
   pub public_inputs: HashMap<String, Val>,
   pub public_inputs_used: HashSet<String>,
-  pub public_outputs: HashMap<String, Val>,
+  pub public_outputs: Vec<(String, Val)>,
   pub parties: Vec<String>,
 }
 
@@ -319,9 +319,17 @@ static OUTPUT_PUBLIC: NativeFunction = native_fn(|this, params| {
     return Err("Non-number outputs are not yet supported".to_type_error());
   }
 
+  if io_data
+    .public_outputs
+    .iter()
+    .any(|(n, _)| n == &name.to_string())
+  {
+    return Err(format!("Output name already used: \"{}\"", name).to_error());
+  }
+
   io_data
     .public_outputs
-    .insert(name.to_string(), value.clone());
+    .push((name.to_string(), value.clone()));
 
   Ok(Val::Undefined)
 });

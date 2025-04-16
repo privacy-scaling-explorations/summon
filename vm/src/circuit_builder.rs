@@ -30,8 +30,8 @@ impl CircuitBuilder {
     self.wire_count = input_ids.len();
   }
 
-  pub fn include_outputs(&mut self, output_vals: &HashMap<String, Val>) -> BTreeMap<String, usize> {
-    for output in output_vals.values() {
+  pub fn include_outputs(&mut self, output_vals: &Vec<(String, Val)>) -> BTreeMap<String, usize> {
+    for (_, output) in output_vals {
       for dep in get_dependencies(output) {
         self.include_val(&dep);
       }
