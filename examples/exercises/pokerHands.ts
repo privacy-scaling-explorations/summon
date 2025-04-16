@@ -19,18 +19,6 @@
 //  1: player1's hand wins
 //  2: player2's hand wins
 
-export default function main(
-  player1Card1: number,
-  player1Card2: number,
-  player1Card3: number,
-  player1Card4: number,
-  player1Card5: number,
-
-  player2Card1: number,
-  player2Card2: number,
-  player2Card3: number,
-  player2Card4: number,
-  player2Card5: number,
-) {
+export default function main(io: Summon.IO) {
   // TODO
 }

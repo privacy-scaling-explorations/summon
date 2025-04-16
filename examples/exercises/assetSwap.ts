@@ -2,10 +2,10 @@
 //
 // Slow negotiations getting you down? Skip to the end using MPC!
 //
-// Suppose two people have 4 assets each that they are interested in swapping. These assets could
-// be anything from trading cards, to fantasy football players, to company subsidiaries. Although
-// each person knows how much they value each asset, they are not incentivized to share this
-// information: "Oh that card is only worth $2 to you? Here's $2.01."
+// Suppose two people have assets each that they are interested in swapping. These assets could be
+// anything from trading cards, to fantasy football players, to company subsidiaries. Although each
+// person knows how much they value each asset, they are not incentivized to share this information:
+// "Oh that card is only worth $2 to you? Here's $2.01."
 //
 // To solve this, we can calculate the ideal swap in MPC without revealing any of this sensitive
 // information. The MPC simply finds the allocation of assets to each party that maximizes the
@@ -14,34 +14,48 @@
 // option.
 //
 // Each party submits valuations both for their own assets and the assets for the other party.
-// Party 1 owns assets 1 to 4 and party 2 owns assets 5 to 8.
 //
-// The circuit should output 8 numbers indicating which party should receive each asset, for
-// example:
-//  No assets swapped:  [1, 1, 1, 1, 2, 2, 2, 2]
-//  All assets swapped: [2, 2, 2, 2, 1, 1, 1, 1]
+// The circuit should output a number for each asset indicating which party should receive it,
+// even if it's going back to the same party. For example:
 //
-//  Party 1 swaps everything for asset 8:
-//                      [2, 1, 1, 1, 1, 1, 1, 1]
+//  No assets swapped:  {
+//    party0Asset0: 0,
+//    party0Asset1: 0,
+//    party0Asset2: 0,
+//    party0Asset3: 0,
+// 
+//    party1Asset0: 1,
+//    party1Asset1: 1,
+//    party1Asset2: 1,
+//    party1Asset3: 1,
+//  }
+//
+//  All assets swapped: {
+//    party0Asset0: 1,
+//    party0Asset1: 1,
+//    party0Asset2: 1,
+//    party0Asset3: 1,
+//
+//    party1Asset0: 0,
+//    party1Asset1: 0,
+//    party1Asset2: 0,
+//    party1Asset3: 0,
+//  }
+//
+//  Party 0 swaps everything for party 1's last asset: {
+//    party0Asset0: 1,
+//    party0Asset1: 1,
+//    party0Asset2: 1,
+//    party0Asset3: 1,
+//
+//    party1Asset0: 1,
+//    party1Asset1: 1,
+//    party1Asset2: 1,
+//    party1Asset3: 0,
+//  }
+//
+// Extension: N parties.
 
-export default function main(
-  party1Asset1Valuation: number,
-  party1Asset2Valuation: number,
-  party1Asset3Valuation: number,
-  party1Asset4Valuation: number,
-  party1Asset5Valuation: number,
-  party1Asset6Valuation: number,
-  party1Asset7Valuation: number,
-  party1Asset8Valuation: number,
-
-  party2Asset1Valuation: number,
-  party2Asset2Valuation: number,
-  party2Asset3Valuation: number,
-  party2Asset4Valuation: number,
-  party2Asset5Valuation: number,
-  party2Asset6Valuation: number,
-  party2Asset7Valuation: number,
-  party2Asset8Valuation: number,
-) {
+export default function main(io: Summon.IO) {
   // TODO
 }
