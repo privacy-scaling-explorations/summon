@@ -53,8 +53,8 @@ impl VsFunction {
   pub fn make_bytecode_frame(&self) -> BytecodeStackFrame {
     let mut registers: Vec<Val> = Vec::with_capacity(self.register_count - 1);
 
-    registers.push(Val::Undefined);
-    registers.push(Val::Undefined);
+    registers.push(Val::Void);
+    registers.push(Val::Void);
 
     for bind_val in &self.binds {
       registers.push(bind_val.clone());
