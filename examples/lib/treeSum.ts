@@ -1,4 +1,4 @@
-export default function treeSum<T>(items: T[], mapper: (x: T) => number) {
+export default function treeSum<T>(items: T[], mapper: (x: T) => number): number {
   if (items.length <= 2) {
     let sum = 0;
 
