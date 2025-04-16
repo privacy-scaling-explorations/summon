@@ -19,9 +19,20 @@
 //  1: player1's hand wins
 //  2: player2's hand wins
 
-// //! test [0, 1, 2, 3, 4,   1, 2, 3, 5, 5] => [1]
+// p2 wins with royal flush
+// (AH 2H 3H 4H 5H) vs (10H JH QH KH AH)
+//! test [0, 1, 2, 3, 4,     9, 10, 11, 12, 0] => [2]
+
+// p1 wins with ace high
+// (AC 2H 3H 4H 7H) vs (2C 3H 4H 6H 7H)
+//! test [13, 1, 2, 3, 6,   14, 2, 3, 5, 6] => [1]
+
+// p2 wins with a pair
+// (AC 2H 3H 4H 7H) vs (2C 3H 4H 6H 6H)
+//! test [13, 1, 2, 3, 6,   14, 2, 3, 5, 5] => [2]
 
 import batcherSort from "../lib/batcherSort.ts";
+import range from "../lib/range.ts";
 
 const categories = {
   fiveOfAKind: 9,
@@ -36,36 +47,17 @@ const categories = {
   highCard: 0,
 };
 
-export default function main(
-  player1Card1: number,
-  player1Card2: number,
-  player1Card3: number,
-  player1Card4: number,
-  player1Card5: number,
+export default function main(io: Summon.IO) {
+  const hands = range(0, 2).map(
+    i => range(0, 5).map(
+      j => io.input(`player${i + 1}`, `player${i + 1}Card${j + 1}`, summon.number()),
+    ),
+  );
 
-  player2Card1: number,
-  player2Card2: number,
-  player2Card3: number,
-  player2Card4: number,
-  player2Card5: number,
-) {
-  const player1Class = classifyPokerHand([
-    player1Card1,
-    player1Card2,
-    player1Card3,
-    player1Card4,
-    player1Card5,
-  ]);
+  const [player1Class, player2Class] = hands.map(classifyPokerHand);
 
-  const player2Class = classifyPokerHand([
-    player2Card1,
-    player2Card2,
-    player2Card3,
-    player2Card4,
-    player2Card5,
-  ]);
-
-  return lexOrder(player1Class, player2Class);
+  const result = lexOrder(player1Class, player2Class);
+  io.outputPublic("result", result);
 }
 
 export function classifyPokerHand(cards: number[]): number[] {
