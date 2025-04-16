@@ -14,13 +14,11 @@
 //   1: Burger Barn
 //   2: Veggie Villa
 
+import range from "../lib/range.ts";
+
 export default function main(io: Summon.IO) {
   const N = io.inputPublic('N', summon.number());
-  const ballots: Ballot[] = [];
-
-  for (let i = 0; i < N; i++) {
-    ballots.push(inputBallot(io, i));
-  }
+  const ballots = range(0, N).map(i => inputBallot(io, i));
 
   io.outputPublic('result', impl(ballots) ? 1 : 0);
 }
