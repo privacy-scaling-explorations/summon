@@ -13,7 +13,7 @@
 // The format above is also used to check circuits with `cargo test`. Simply move them to their own
 // line, similar to test annotations in `loopAdd.ts` and `greaterThan10.ts`.
 
-import treeSum from "../../lib/treeSum.ts";
+import treeSum from "../lib/treeSum.ts";
 
 export default function main(io: Summon.IO) {
   // 10 inputs are hardcoded for the sake of simplicity.

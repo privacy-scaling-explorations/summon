@@ -19,7 +19,7 @@
 //  1: player1's hand wins
 //  2: player2's hand wins
 
-//! test [0, 1, 2, 3, 4,   1, 2, 3, 5, 5] => [1]
+// //! test [0, 1, 2, 3, 4,   1, 2, 3, 5, 5] => [1]
 
 import batcherSort from "../lib/batcherSort.ts";
 
