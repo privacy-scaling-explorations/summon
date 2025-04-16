@@ -4,8 +4,8 @@ use crate::{
   bytecode::{Bytecode, DecoderMaker},
   bytecode_decoder::BytecodeDecoder,
   bytecode_stack_frame::BytecodeStackFrame,
-  make_generator_frame::MakeGeneratorFrame,
   internal_error_builtin::ToInternalError,
+  make_generator_frame::MakeGeneratorFrame,
   type_error_builtin::ToTypeError,
   vs_array::VsArray,
   vs_class::VsClass,
@@ -57,8 +57,8 @@ impl CsFunction {
   pub fn make_bytecode_frame(&self) -> BytecodeStackFrame {
     let mut registers: Vec<Val> = Vec::with_capacity(self.register_count - 1);
 
-    registers.push(Val::Undefined);
-    registers.push(Val::Undefined);
+    registers.push(Val::Void);
+    registers.push(Val::Void);
 
     for bind_val in &self.binds {
       registers.push(bind_val.clone());

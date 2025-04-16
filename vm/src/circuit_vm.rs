@@ -1,12 +1,13 @@
 use std::{cmp::Ordering, collections::BinaryHeap, mem::take, rc::Rc};
 
 use crate::{
+  arithmetic_merge::arithmetic_merge,
+  bytecode_stack_frame::BytecodeStackFrame,
+  circuit_vm_branch::CircuitVMBranch,
   internal_error_builtin::ToInternalError,
   operations::op_or,
   vs_value::{ToVal, Val},
   CallResult, FirstStackFrame, LoadFunctionResult, StackFrameTrait, ValTrait,
-  arithmetic_merge::arithmetic_merge, bytecode_stack_frame::BytecodeStackFrame,
-  circuit_vm_branch::CircuitVMBranch,
 };
 
 #[derive(Default)]

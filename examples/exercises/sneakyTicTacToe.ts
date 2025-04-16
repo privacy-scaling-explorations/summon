@@ -30,7 +30,7 @@
 import hash from '../lib/hash.ts';
 
 export default function main(io: Summon.IO) {
-  const grid = inputGrid(io);
+  let grid = inputGrid(io);
 
   // should equal hash(player1Salt, player1HiddenPos)
   const player1Commitment = io.inputPublic('player1Commitment', summon.number());
