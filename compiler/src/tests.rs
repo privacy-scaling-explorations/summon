@@ -51,6 +51,11 @@ mod tests_ {
       let mut output_names = circuit.outputs.iter().collect::<Vec<_>>();
       output_names.sort_by(|(_, id_a), (_, id_b)| id_a.cmp(id_b));
 
+      let ordered_outputs = output_names
+        .iter()
+        .map(|(name, _)| outputs.get(*name).unwrap())
+        .collect::<Vec<_>>();
+
       let output_name_to_index = output_names
         .iter()
         .enumerate()
@@ -61,9 +66,16 @@ mod tests_ {
         let wire_id = output_name_to_index[name];
 
         assert_eq!(
-          *value, expected_output[wire_id],
-          "Test: {}: {}: Output mismatch for {}: expected {}, got {}",
-          path.path, descriptor, name, expected_output[wire_id], value
+          *value,
+          expected_output[wire_id],
+          "Test: {}: {}: Output mismatch for {}: expected {}, got {} ({:?} vs {:?})",
+          path.path,
+          descriptor,
+          name,
+          expected_output[wire_id],
+          value,
+          expected_output,
+          ordered_outputs
         );
       }
     }
