@@ -163,7 +163,9 @@ pub fn op_exp(left: &Val, right: &Val) -> Result<Val, Val> {
 
 pub fn op_eq_impl(left: &Val, right: &Val) -> Result<bool, Val> {
   Ok(match (left, right) {
-    (Val::Void, Val::Void) => true,
+    // Note: We consider `undefined` and `void` to be ===equal because `void` becomes `undefined`
+    // when accessed.
+    (Val::Void | Val::Undefined, Val::Void | Val::Undefined) => true,
     (left, Val::Undefined | Val::Null) => matches!(left, Val::Undefined | Val::Null),
     (Val::Bool(left_bool), Val::Bool(right_bool)) => left_bool == right_bool,
     (Val::Number(left_number), Val::Number(right_number)) => left_number == right_number,
@@ -312,8 +314,9 @@ pub fn op_ne(left: &Val, right: &Val) -> Result<Val, Val> {
 
 pub fn op_triple_eq_impl(left: &Val, right: &Val) -> Result<bool, Val> {
   Ok(match (left, right) {
-    (Val::Void, Val::Void) => true,
-    (Val::Undefined, Val::Undefined) => true,
+    // Note: We consider `undefined` and `void` to be ===equal because `void` becomes `undefined`
+    // when accessed.
+    (Val::Void | Val::Undefined, Val::Void | Val::Undefined) => true,
     (Val::Null, Val::Null) => true,
     (Val::Bool(left_bool), Val::Bool(right_bool)) => left_bool == right_bool,
     (Val::Number(left_number), Val::Number(right_number)) => left_number == right_number,
