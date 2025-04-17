@@ -19,7 +19,7 @@ impl fmt::Display for DiagnosticLevel {
   }
 }
 
-#[derive(serde::Serialize, Debug)]
+#[derive(serde::Serialize, Debug, Clone)]
 pub struct Diagnostic {
   pub level: DiagnosticLevel,
   pub message: String,

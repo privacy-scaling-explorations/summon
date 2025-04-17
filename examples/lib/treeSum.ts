@@ -1,4 +1,7 @@
-export default function treeSum<T>(items: T[], mapper: (x: T) => number) {
+// Note: This could be implemented using `treeReduce` but we hardcode this version because it's
+// common and easier to understand without the extra abstraction.
+
+export default function treeSum<T>(items: T[], mapper: (x: T) => number): number {
   if (items.length <= 2) {
     let sum = 0;
 

@@ -10,3 +10,4 @@ summon_common = { workspace = true }
 bristol-circuit = { workspace = true }
 num-derive = { workspace = true }
 serde_json = { workspace = true }
+serde = { workspace = true }

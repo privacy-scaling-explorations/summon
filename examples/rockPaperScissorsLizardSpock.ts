@@ -22,7 +22,14 @@ const winConditions = [
   [ROCK, /* crushes */ SCISSORS],
 ];
 
-export default function main(player1: number, player2: number) {
+export default function main(io: Summon.IO) {
+  const player1 = io.input('player1', 'player1', summon.number());
+  const player2 = io.input('player2', 'player2', summon.number());
+
+  io.outputPublic('result', battle(player1, player2));
+}
+
+function battle(player1: number, player2: number) {
   const player1Invalid = player1 < 1 || player1 > 5;
   const player2Invalid = player2 < 1 || player2 > 5;
 

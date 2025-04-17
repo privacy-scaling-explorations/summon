@@ -7,5 +7,8 @@ export default function hash(salt: number, msg: number): number {
     [a, b] = [b, a];
   }
 
-  return a + b;
+  // Max safe integer in f64. This is a workaround due to encoding issues.
+  const mask = 0b11111111111111111111111111111111111111111111111111111;
+
+  return (a + b) & mask;
 }

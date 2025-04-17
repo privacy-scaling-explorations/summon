@@ -8,6 +8,7 @@ use crate::vs_class::VsClass;
 use crate::vs_value::{LoadFunctionResult, ToVal, Val};
 
 use super::builtin_object::BuiltinObject;
+use super::type_error_builtin::ToTypeError;
 
 pub struct SummonBuiltin {}
 
@@ -19,6 +20,7 @@ impl BuiltinObject for SummonBuiltin {
   fn bo_sub(key: &str) -> Val {
     match key {
       "isSignal" => IS_SIGNAL.to_val(),
+      "number" => NUMBER.to_val(),
 
       _ => Val::Undefined,
     }
@@ -45,4 +47,15 @@ static IS_SIGNAL: NativeFunction = native_fn(|_this, params| {
   };
 
   Ok(val_dynamic_downcast::<CircuitSignal>(x).is_some().to_val())
+});
+
+static NUMBER: NativeFunction = native_fn(|_this, params| {
+  if !params.is_empty() {
+    return Err("Unexpected arguments".to_type_error());
+  }
+
+  Ok(Val::make_object(&[
+    ("about", "summon runtime type".to_val()),
+    ("json", "number".to_val()),
+  ]))
 });

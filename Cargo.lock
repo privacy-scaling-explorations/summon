@@ -1372,6 +1372,7 @@ dependencies = [
  "serde_json",
  "serde_qs",
  "summon_compiler",
+ "summon_vm",
  "url",
 ]
 
@@ -1411,6 +1412,7 @@ dependencies = [
  "num-bigint",
  "num-derive",
  "num-traits",
+ "serde",
  "serde_json",
  "summon_common",
 ]

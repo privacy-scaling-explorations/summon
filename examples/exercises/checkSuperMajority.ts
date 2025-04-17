@@ -13,36 +13,29 @@
 // The format above is also used to check circuits with `cargo test`. Simply move them to their own
 // line, similar to test annotations in `loopAdd.ts` and `greaterThan10.ts`.
 
-export default function main(
-  // The main function has this quirky signature to tell Summon to instantiate it for exactly 10
-  // inputs. However we can implement the general algorithm by writing `impl` which simply takes an
-  // array of inputs with unspecified length.
-  ballot0: number,
-  ballot1: number,
-  ballot2: number,
-  ballot3: number,
-  ballot4: number,
-  ballot5: number,
-  ballot6: number,
-  ballot7: number,
-  ballot8: number,
-  ballot9: number,
-) {
-  return impl([
-    ballot0,
-    ballot1,
-    ballot2,
-    ballot3,
-    ballot4,
-    ballot5,
-    ballot6,
-    ballot7,
-    ballot8,
-    ballot9,
-  ]);
+export default function main(io: Summon.IO) {
+  // 10 inputs are hardcoded for the sake of simplicity.
+  // As an extension, you can use `io.publicInput` to get the number of parties at compile time and
+  // use that to dynamically gather the inputs. See `medianCircuit.ts` for an example.
+
+  const ballots = [
+    io.input('party0', 'ballot0', summon.number()),
+    io.input('party1', 'ballot1', summon.number()),
+    io.input('party2', 'ballot2', summon.number()),
+    io.input('party3', 'ballot3', summon.number()),
+    io.input('party4', 'ballot4', summon.number()),
+    io.input('party5', 'ballot5', summon.number()),
+    io.input('party6', 'ballot6', summon.number()),
+    io.input('party7', 'ballot7', summon.number()),
+    io.input('party8', 'ballot8', summon.number()),
+    io.input('party9', 'ballot9', summon.number()),
+  ];
+
+  io.outputPublic('result', impl(ballots) ? 1 : 0);
 }
 
-function impl(ballots: number[]) {
+function impl(ballots: number[]): boolean {
   // TODO: Return true iff 2/3 or more ballots are non-zero. (In the resulting circuit, true will
   // be converted to 1 and false will be converted to 0.)
+  throw new Error('Implement me');
 }

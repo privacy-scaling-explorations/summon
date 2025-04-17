@@ -9,6 +9,7 @@ path = "src/main.rs"
 
 [dependencies]
 summon_compiler = { workspace = true }
+summon_vm = { workspace = true }
 url = { workspace = true }
 serde = { workspace = true }
 serde_qs = { workspace = true }

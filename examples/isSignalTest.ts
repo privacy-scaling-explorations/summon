@@ -1,6 +1,8 @@
 //! test [1] => [2]
 
-export default (x: number) => {
+export default (io: Summon.IO) => {
+  const x = io.input('alice', 'x', summon.number());
+
   let count = 0;
 
   if (summon.isSignal('hello')) {
@@ -24,5 +26,5 @@ export default (x: number) => {
   // `count` is a signal, count: x + 1
   // (even though it wasn't before)
 
-  return count;
+  io.outputPublic('count', count);
 };

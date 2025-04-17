@@ -54,3 +54,10 @@ pub fn code_point_at(bytes: &[u8], len: usize, index: usize) -> Option<u32> {
 
   Some(value)
 }
+
+#[derive(Clone)]
+pub struct InputDescriptor {
+  pub from: String,
+  pub name: String,
+  pub id: usize,
+}

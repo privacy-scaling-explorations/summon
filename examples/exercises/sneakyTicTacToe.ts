@@ -16,8 +16,7 @@
 // circuit should check that hash(salt, hiddenPos) of each player is equal to their commitment,
 // and failure to do so should give victory to the opponent.
 //
-// Valid moves are 0 for top-left to 8 for bottom-right (see grid layout). An invalid move gives
-// victory to the opponent.
+// Moves must be on the grid (0 <= i,j <= 2). Any invalid move gives victory to the opponent.
 //
 // Outputs:
 //   0 to indicate that play should continue (a valid move was played and nothing happened yet)
@@ -30,32 +29,51 @@
 
 import hash from '../lib/hash.ts';
 
-export default function main(
-  // shared public inputs
-  grid0: number, // layout:
-  grid1: number, // grid0 grid1 grid2
-  grid2: number, // grid3 grid4 grid5
-  grid3: number, // grid6 grid7 grid8
-  grid4: number,
-  grid5: number, // for gridN:
-  grid6: number, //  0 means empty
-  grid7: number, //  1 means player 1 has played there
-  grid8: number, //  2 means player 2 has played there
-  player1Commitment: number, // should equal hash(player1Salt, player1HiddenPos)
-  player2Commitment: number, // should equal hash(player2Salt, player2HiddenPos)
-  currentPlayer: number, // 1 for player 1's turn, 2 for player 2's turn
+export default function main(io: Summon.IO) {
+  let grid = inputGrid(io);
 
-  // player 1
-  player1Salt: number,
-  player1HiddenPos: number, // 0 for top-left, 8 for bottom-right (see grid layout)
+  // should equal hash(player1Salt, player1HiddenPos)
+  const player1Commitment = io.inputPublic('player1Commitment', summon.number());
 
-  // player 2
-  player2Salt: number,
-  player2HiddenPos: number, // 0 for top-left, 8 for bottom-right (see grid layout)
+  // should equal hash(player2Salt, player2HiddenPos)
+  const player2Commitment = io.inputPublic('player2Commitment', summon.number());
 
-  // current player
-  movePos: number, // 0 for top-left, 8 for bottom-right (see grid layout)
-) {
+  const player1Salt = io.input('player1', 'player1Salt', summon.number());
+  const player1HiddenPos = {
+    i: io.input('player1', 'player1HiddenI', summon.number()),
+    j: io.input('player1', 'player1HiddenJ', summon.number()),
+  };
+
+  const player2Salt = io.input('player2', 'player2Salt', summon.number());
+  const player2HiddenPos = {
+    i: io.input('player2', 'player2HiddenI', summon.number()),
+    j: io.input('player2', 'player2HiddenJ', summon.number()),
+  };
+
+  const currentPlayer = io.inputPublic('currentPlayer', summon.number());
+
+  if (currentPlayer !== 1 && currentPlayer !== 2) {
+    throw new Error('Invalid current player');
+  }
+
+  // The current move is determined by the current player, but it's still public. (If this is made
+  // into an app, the parties should establish the current player's choice outside the circuit so
+  // they can input the same values.)
+  const movePos = {
+    i: io.inputPublic('moveI', summon.number()),
+    j: io.inputPublic('moveJ', summon.number()),
+  };
+
   // check the commitments are correct
-  // check the grid for all win conditions
+  // check the grid for win conditions
+  throw new Error('Implement me');
+}
+
+function inputGrid(io: Summon.IO): number[][] {
+  // 3x3 grid (input names: grid[0][0], .. grid[2][2])
+  // in each cell:
+  //  0: empty or contains a hidden move
+  //  1: player 1 has played there
+  //  2: player 2 has played there
+  throw new Error('Implement me');
 }

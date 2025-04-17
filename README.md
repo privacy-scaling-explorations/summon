@@ -53,15 +53,17 @@ There is also a NodeJS API:
 
 const iterations = 3;
 
-export default function main(input: number) {
+export default (io: Summon.IO) => {
+  const input = io.input("alice", "input", summon.number());
+
   let res = 0;
 
   for (let i = 0; i < iterations; i++) {
     res += input;
   }
 
-  return res;
-}
+  io.outputPublic("res", res);
+};
 ```
 
 ```sh
@@ -93,6 +95,18 @@ summonc examples/loopAdd.ts
 }
 ```
 
+```jsonc
+// output/mpc_settings.json
+
+[
+  {
+    "name": "alice",
+    "inputs": ["input"],
+    "outputs": ["res"]
+  }
+]
+```
+
 ## Signal-Dependent Branching
 
 Building a circuit from a program with a fixed path is relatively
@@ -103,7 +117,13 @@ on the input. For example:
 ```ts
 // examples/greaterThan10.ts
 
-export default function main(x: number) {
+export default (io: Summon.IO) => {
+  const x = io.input("alice", "x", summon.number());
+
+  io.outputPublic("result", greaterThan10(x));
+};
+
+function greaterThan10(x: number) {
   if (x > 10) {
     return 10;
   }
@@ -158,7 +178,8 @@ have prepared some exercises you might find interesting:
 
 - [Check Supermajority](./examples/exercises/checkSuperMajority.ts)
 - [Approval Voting](./examples/exercises/approvalVoting.ts)
-- TODO: exercise with in-between difficulty
+- There's a significant difficulty gap here, but there's extensions to the first
+  two exercises that can help bridge this gap
 - [Sneaky Tic-Tac-Toe](./examples/exercises/sneakyTicTacToe.ts)
 - [Asset Swap](./examples/exercises/assetSwap.ts)
 - [Poker Hands](./examples/exercises/pokerHands.ts)
