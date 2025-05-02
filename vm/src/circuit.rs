@@ -295,7 +295,7 @@ impl CircuitNumber for NumberOrBool {
       UnaryOp::Plus => input.clone(),
       UnaryOp::Minus => NumberOrBool::Number(0usize.wrapping_sub(input.as_usize())),
       UnaryOp::Not => match input {
-        NumberOrBool::Number(x) => NumberOrBool::Number(!x),
+        NumberOrBool::Number(x) => NumberOrBool::Bool(*x == 0),
         NumberOrBool::Bool(x) => NumberOrBool::Bool(!x),
       },
       UnaryOp::BitNot => NumberOrBool::Number(!input.as_usize()),
