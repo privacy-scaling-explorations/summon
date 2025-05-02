@@ -313,8 +313,8 @@ static OUTPUT: NativeFunction = native_fn(|this, params| {
     return Err("Expected `name` to be a string".to_type_error());
   };
 
-  if value.typeof_() != VsType::Number {
-    return Err("Non-number outputs are not yet supported".to_type_error());
+  if value.typeof_() != VsType::Number && value.typeof_() != VsType::Bool {
+    return Err("Only number and bool outputs are currently supported".to_type_error());
   }
 
   // _io_data.add_party(to.to_string());
@@ -343,8 +343,8 @@ static OUTPUT_PUBLIC: NativeFunction = native_fn(|this, params| {
     return Err("Expected name to be a string".to_type_error());
   };
 
-  if value.typeof_() != VsType::Number {
-    return Err("Non-number outputs are not yet supported".to_type_error());
+  if value.typeof_() != VsType::Number && value.typeof_() != VsType::Bool {
+    return Err("Only number and bool outputs are currently supported".to_type_error());
   }
 
   if io_data
