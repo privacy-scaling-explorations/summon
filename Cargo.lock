@@ -165,7 +165,7 @@ dependencies = [
 [[package]]
 name = "boolify"
 version = "0.1.0"
-source = "git+https://github.com/voltrevo/boolify?rev=09a5636#09a5636fffef8025eaf4f847dacb16e886853d6a"
+source = "git+https://github.com/voltrevo/boolify?rev=ef84823#ef84823ef13b959dc829f2d789b24b0d5797b639"
 dependencies = [
  "bristol-circuit",
  "serde",
@@ -175,7 +175,7 @@ dependencies = [
 [[package]]
 name = "bristol-circuit"
 version = "0.1.0"
-source = "git+https://github.com/voltrevo/bristol-circuit?rev=288847c#288847cdf8391627eeaaf2adea8971f944ea055f"
+source = "git+https://github.com/voltrevo/bristol-circuit?rev=10ee9c7#10ee9c7c07d3cfdd7163b4c8ebf529a72c1006bb"
 dependencies = [
  "serde",
  "serde_json",
@@ -1380,6 +1380,7 @@ dependencies = [
 name = "summon_common"
 version = "0.1.0"
 dependencies = [
+ "serde_json",
  "strum",
  "strum_macros",
 ]

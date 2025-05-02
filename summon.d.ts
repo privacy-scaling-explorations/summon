@@ -16,6 +16,9 @@ declare const summon: {
 
   /** Produces a runtime value that models the type `number`. */
   number(): Summon.Type<number>;
+
+  /** Produces a runtime value that models the type `boolean`. */
+  bool(): Summon.Type<boolean>;
 };
 
 declare namespace Summon {

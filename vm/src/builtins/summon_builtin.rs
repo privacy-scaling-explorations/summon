@@ -21,6 +21,7 @@ impl BuiltinObject for SummonBuiltin {
     match key {
       "isSignal" => IS_SIGNAL.to_val(),
       "number" => NUMBER.to_val(),
+      "bool" => BOOL.to_val(),
 
       _ => Val::Undefined,
     }
@@ -57,5 +58,16 @@ static NUMBER: NativeFunction = native_fn(|_this, params| {
   Ok(Val::make_object(&[
     ("about", "summon runtime type".to_val()),
     ("json", "number".to_val()),
+  ]))
+});
+
+static BOOL: NativeFunction = native_fn(|_this, params| {
+  if !params.is_empty() {
+    return Err("Unexpected arguments".to_type_error());
+  }
+
+  Ok(Val::make_object(&[
+    ("about", "summon runtime type".to_val()),
+    ("json", "bool".to_val()),
   ]))
 });
