@@ -5,6 +5,7 @@ use std::{
 
 use crate::{vs_value::Val, ValTrait};
 use num_traits::ToPrimitive;
+use serde_json::json;
 
 use crate::{
   circuit::Gate,
@@ -17,7 +18,7 @@ pub struct CircuitBuilder {
   pub wire_count: usize,
   pub wires_included: HashMap<usize, usize>, // CircuitSignal.id -> wire_id
   pub signal_data: Vec<Option<Box<CircuitSignalData>>>, // wire_id -> CircuitSignalData
-  pub constants: HashMap<usize, usize>,      // value -> wire_id
+  pub constants: HashMap<serde_json::Value, usize>, // value -> wire_id
 }
 
 impl CircuitBuilder {
@@ -57,7 +58,7 @@ impl CircuitBuilder {
   pub fn include_val_shallow(&mut self, val: &Val) -> usize {
     match val {
       Val::Bool(bool) => {
-        let value = if *bool { 1usize } else { 0usize };
+        let value = if *bool { json!(true) } else { json!(false) };
 
         if let Some(wire_id) = self.constants.get(&value) {
           return *wire_id;
@@ -78,6 +79,8 @@ impl CircuitBuilder {
         } else {
           number.to_usize().unwrap()
         };
+
+        let value = serde_json::Value::from(value);
 
         if let Some(wire_id) = self.constants.get(&value) {
           return *wire_id;

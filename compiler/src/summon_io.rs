@@ -5,6 +5,7 @@ use std::{
 };
 
 use num_bigint::BigInt;
+use serde_json::json;
 use summon_common::InputDescriptor;
 use summon_vm::{
   circuit_signal::{CircuitSignal, CircuitSignalData},
@@ -185,23 +186,44 @@ static INPUT: NativeFunction = native_fn(|this, params| {
     return Err("Expected `name` to be a string".to_type_error());
   };
 
-  let number_type = Val::make_object(&[
-    ("about", "summon runtime type".to_val()),
-    ("json", "number".to_val()),
-  ]);
+  let (type_json, signal) = 's: {
+    let number_type = Val::make_object(&[
+      ("about", "summon runtime type".to_val()),
+      ("json", "number".to_val()),
+    ]);
 
-  let Ok(true) = op_triple_eq_impl(type_, &number_type) else {
+    if let Ok(true) = op_triple_eq_impl(type_, &number_type) {
+      break 's (
+        json!("number"),
+        CircuitSignal::new(
+          &io_data.id_gen,
+          Some(VsType::Number),
+          CircuitSignalData::Input,
+        ),
+      );
+    }
+
+    let bool_type = Val::make_object(&[
+      ("about", "summon runtime type".to_val()),
+      ("json", "bool".to_val()),
+    ]);
+
+    if let Ok(true) = op_triple_eq_impl(type_, &bool_type) {
+      break 's (
+        json!("bool"),
+        CircuitSignal::new(
+          &io_data.id_gen,
+          Some(VsType::Bool),
+          CircuitSignalData::Input,
+        ),
+      );
+    }
+
     return Err(
-      "Not implemented yet: type passed to io.input was something other than summon.number()"
+      "Not implemented yet: type passed to io.input was something other than summon.number(), summon.bool()"
         .to_internal_error(),
     );
   };
-
-  let signal = CircuitSignal::new(
-    &io_data.id_gen,
-    Some(VsType::Number),
-    CircuitSignalData::Input,
-  );
 
   let newly_inserted = io_data.inputs_used.insert(name.to_string());
 
@@ -214,6 +236,7 @@ static INPUT: NativeFunction = native_fn(|this, params| {
   io_data.inputs.push(InputDescriptor {
     from: from.clone(),
     name: name.to_string(),
+    type_json,
     id: signal.id,
   });
 
@@ -239,24 +262,29 @@ static INPUT_PUBLIC: NativeFunction = native_fn(|this, params| {
     return Err("Expected `name` to be a string".to_type_error());
   };
 
-  let number_type = Val::make_object(&[
-    ("about", "summon runtime type".to_val()),
-    ("json", "number".to_val()),
-  ]);
-
-  let Ok(true) = op_triple_eq_impl(type_, &number_type) else {
-    return Err(
-      "Not implemented yet: type passed to io.inputPublic was something other than summon.number()"
-        .to_internal_error(),
-    );
-  };
-
   let Some(value) = io_data.public_inputs.get(&name.to_string()) else {
     return Err(format!("Missing public input: \"{}\"", name).to_error());
   };
 
-  let value = value.clone();
+  match check_runtime_type(type_, value) {
+    TypeCheckResult::Ok => {}
+    TypeCheckResult::BadValue { type_json } => {
+      return Err(
+        format!(
+          "Public input \"{}\":{} does not match type {}",
+          name,
+          value.codify(),
+          type_json.codify()
+        )
+        .to_type_error(),
+      );
+    }
+    TypeCheckResult::BadType => {
+      return Err(format!("Unexpected/unsupported type: {}", type_.codify()).to_type_error());
+    }
+  };
 
+  let value = value.clone();
   io_data.public_inputs_used.insert(name.to_string());
 
   Ok(value)
@@ -355,3 +383,47 @@ static ADD_PARTY: NativeFunction = native_fn(|this, params| {
 
   Ok(Val::Undefined)
 });
+
+enum TypeCheckResult {
+  Ok,
+  BadValue { type_json: Val },
+  BadType,
+}
+
+fn check_runtime_type(type_: &Val, value: &Val) -> TypeCheckResult {
+  let number_type = Val::make_object(&[
+    ("about", "summon runtime type".to_val()),
+    ("json", "number".to_val()),
+  ]);
+
+  if op_triple_eq_impl(type_, &number_type).unwrap_or(false) {
+    let res = if !matches!(value, Val::Number(_)) {
+      TypeCheckResult::BadValue {
+        type_json: "number".to_val(),
+      }
+    } else {
+      TypeCheckResult::Ok
+    };
+
+    return res;
+  }
+
+  let bool_type = Val::make_object(&[
+    ("about", "summon runtime type".to_val()),
+    ("json", "bool".to_val()),
+  ]);
+
+  if op_triple_eq_impl(type_, &bool_type).unwrap_or(false) {
+    let res = if !matches!(value, Val::Bool(_)) {
+      TypeCheckResult::BadValue {
+        type_json: "bool".to_val(),
+      }
+    } else {
+      TypeCheckResult::Ok
+    };
+
+    return res;
+  }
+
+  TypeCheckResult::BadType
+}

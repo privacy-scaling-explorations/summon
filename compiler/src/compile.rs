@@ -4,7 +4,7 @@ use std::{cell::RefCell, collections::BTreeMap, collections::HashMap, rc::Rc};
 use crate::asm::Module;
 use crate::summon_io::SummonIO;
 use summon_common::InputDescriptor;
-use summon_vm::circuit::MpcSettings;
+use summon_vm::circuit::{CircuitInput, MpcSettings};
 use summon_vm::vs_value::{ToDynamicVal, Val};
 use summon_vm::{
   circuit::Circuit, circuit_builder::CircuitBuilder, circuit_vm::CircuitVM,
@@ -256,14 +256,20 @@ fn generate_circuit(
   outputs: BTreeMap<String, usize>,
   builder: CircuitBuilder,
 ) -> Circuit {
-  let mut inputs = BTreeMap::<String, usize>::new();
+  let mut inputs = BTreeMap::<String, CircuitInput>::new();
   for (i, desc) in input_descriptors.iter().enumerate() {
-    inputs.insert(desc.name.clone(), i);
+    inputs.insert(
+      desc.name.clone(),
+      CircuitInput {
+        wire_id: i,
+        type_json: desc.type_json.clone(),
+      },
+    );
   }
 
-  let mut constants = BTreeMap::<usize, usize>::new();
+  let mut constants = BTreeMap::<usize, serde_json::Value>::new();
   for (value, wire_id) in &builder.constants {
-    constants.insert(*wire_id, *value);
+    constants.insert(*wire_id, value.clone());
   }
 
   let outputs_vec = outputs.keys().cloned().collect::<Vec<_>>();
