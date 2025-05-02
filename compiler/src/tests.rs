@@ -6,7 +6,10 @@ mod tests_ {
     path::PathBuf,
   };
 
-  use summon_vm::vs_value::{ToVal, Val};
+  use summon_vm::{
+    circuit::CircuitInput,
+    vs_value::{ToVal, Val},
+  };
 
   use crate::{compile, resolve_entry_path::resolve_entry_path, DiagnosticsByPath};
 
@@ -43,7 +46,15 @@ mod tests_ {
       let inputs = circuit
         .inputs
         .iter()
-        .map(|(name, i)| (name.clone(), input[*i]))
+        .map(
+          |(
+            name,
+            CircuitInput {
+              wire_id,
+              type_json: _,
+            },
+          )| (name.clone(), input[*wire_id]),
+        )
         .collect::<BTreeMap<_, _>>();
 
       let outputs = circuit.eval(&inputs);

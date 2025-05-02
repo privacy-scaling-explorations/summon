@@ -7,7 +7,7 @@
 // most approvals.
 //
 // Example:
-//  //! test { N: 6 } [1, 1, 0,   1, 1, 0,   0, 1, 0,   0, 1, 1,   0, 1, 1,   0, 1, 1] => [1]
+//  //! test { N: 6 } [true, true, false,   true, true, false,   false, true, false,   false, true, true,   false, true, true,   false, true, true] => [1]
 //
 // Output meanings:
 //   0: Steak Shack
@@ -33,9 +33,9 @@ type Ballot = {
 
 function inputBallot(io: Summon.IO, partyIndex: number): Ballot {
   return {
-    steakShack: io.input(`party${partyIndex}`, `steakShack${partyIndex}`, summon.number()) !== 0,
-    burgerBarn: io.input(`party${partyIndex}`, `burgerBarn${partyIndex}`, summon.number()) !== 0,
-    veggieVilla: io.input(`party${partyIndex}`, `veggieVilla${partyIndex}`, summon.number()) !== 0,
+    steakShack: io.input(`party${partyIndex}`, `steakShack${partyIndex}`, summon.bool()),
+    burgerBarn: io.input(`party${partyIndex}`, `burgerBarn${partyIndex}`, summon.bool()),
+    veggieVilla: io.input(`party${partyIndex}`, `veggieVilla${partyIndex}`, summon.bool()),
   };
 }
 

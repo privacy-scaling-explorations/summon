@@ -85,13 +85,23 @@ summonc examples/loopAdd.ts
 // output/circuit_info.json
 
 {
-  "input_name_to_wire_index": {
-    "input": 0
-  },
-  "constants": {},
-  "output_name_to_wire_index": {
-    "main": 2
-  }
+  "constants": [],
+  "inputs": [
+    {
+      "name": "input",
+      "type": "number",
+      "address": 0,
+      "width": 1
+    }
+  ],
+  "outputs": [
+    {
+      "name": "res",
+      "type": "number",
+      "address": 2,
+      "width": 1
+    }
+  ]
 }
 ```
 

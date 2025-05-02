@@ -59,5 +59,6 @@ pub fn code_point_at(bytes: &[u8], len: usize, index: usize) -> Option<u32> {
 pub struct InputDescriptor {
   pub from: String,
   pub name: String,
+  pub type_json: serde_json::Value,
   pub id: usize,
 }
