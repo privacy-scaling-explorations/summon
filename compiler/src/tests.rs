@@ -7,7 +7,7 @@ mod tests_ {
   };
 
   use summon_vm::{
-    circuit::CircuitInput,
+    circuit::{CircuitInput, CircuitNumber, NumberOrBool},
     vs_value::{ToVal, Val},
   };
 
@@ -53,7 +53,7 @@ mod tests_ {
               wire_id,
               type_json: _,
             },
-          )| (name.clone(), input[*wire_id]),
+          )| { (name.clone(), NumberOrBool::from_json(&input[*wire_id])) },
         )
         .collect::<BTreeMap<_, _>>();
 
@@ -78,7 +78,7 @@ mod tests_ {
 
         assert_eq!(
           *value,
-          expected_output[wire_id],
+          NumberOrBool::from_json(&expected_output[wire_id]),
           "Test: {}: {}: Output mismatch for {}: expected {}, got {} ({:?} vs {:?})",
           path.path,
           descriptor,
@@ -97,8 +97,8 @@ mod tests_ {
     path: String,
     descriptor: String,
     public_inputs: HashMap<String, Val>,
-    input: Vec<usize>,
-    expected_output: Vec<usize>,
+    input: Vec<serde_json::Value>,
+    expected_output: Vec<serde_json::Value>,
   }
 
   fn parse_test_case(path: &str, line: &str) -> Option<TestCase> {
@@ -151,15 +151,15 @@ mod tests_ {
     );
 
     // parse input vector
-    let input = parts[0]
+    let input: Vec<serde_json::Value> = parts[0]
       .trim()
       .trim_start_matches('[')
       .trim_end_matches(']')
       .split(',')
       .map(|s| {
         let t = s.trim();
-        t.parse::<usize>()
-          .unwrap_or_else(|_| panic!("invalid usize `{}` in input array", t))
+        serde_json::from_str::<serde_json::Value>(t)
+          .unwrap_or_else(|_| panic!("invalid JSON `{}` in input array", t))
       })
       .collect();
 
@@ -171,8 +171,8 @@ mod tests_ {
       .split(',')
       .map(|s| {
         let t = s.trim();
-        t.parse::<usize>()
-          .unwrap_or_else(|_| panic!("invalid usize `{}` in expected_output array", t))
+        serde_json::from_str::<serde_json::Value>(t)
+          .unwrap_or_else(|_| panic!("invalid JSON `{}` in expected_output array", t))
       })
       .collect();
 
