@@ -5,18 +5,18 @@
 // The circuit should return 1 to indicate the motion passes and 0 to indicate it fails.
 //
 // For example:
-//! test { N: 10 } [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] => [0]
-//! test { N: 10 } [1, 1, 1, 1, 1, 1, 1, 1, 1, 1] => [1]
-//! test { N: 10 } [0, 7, 8, 0, 1, 1, 0, 0, 2, 2] => [0]
-//! test { N: 10 } [0, 7, 8, 0, 1, 1, 0, 3, 2, 2] => [1]
-//! test { N: 3 } [0, 0, 0] => [0]
-//! test { N: 3 } [1, 1, 1] => [1]
-//! test { N: 3 } [0, 1, 1] => [1]
-//! test { N: 3 } [0, 0, 1] => [0]
-//! test { N: 5 } [0, 0, 0, 0, 0] => [0]
-//! test { N: 5 } [1, 1, 1, 1, 1] => [1]
-//! test { N: 5 } [0, 1, 1, 1, 1] => [1]
-//! test { N: 5 } [0, 0, 1, 1, 1] => [0]
+//! test { N: 10 } [false, false, false, false, false, false, false, false, false, false] => [false]
+//! test { N: 10 } [ true,  true,  true,  true,  true,  true,  true,  true,  true,  true] => [ true]
+//! test { N: 10 } [false,  true,  true, false,  true,  true, false, false,  true,  true] => [false]
+//! test { N: 10 } [false,  true,  true, false,  true,  true, false,  true,  true,  true] => [ true]
+//! test { N: 3 } [false, false, false] => [false]
+//! test { N: 3 } [ true,  true,  true] => [ true]
+//! test { N: 3 } [false,  true,  true] => [ true]
+//! test { N: 3 } [false, false,  true] => [false]
+//! test { N: 5 } [false, false, false, false, false] => [false]
+//! test { N: 5 } [ true,  true,  true,  true,  true] => [ true]
+//! test { N: 5 } [false,  true,  true,  true,  true] => [ true]
+//! test { N: 5 } [false, false,  true,  true,  true] => [false]
 //
 // The format above is also used to check circuits with `cargo test`. Simply move them to their own
 // line, similar to test annotations in `loopAdd.ts` and `greaterThan10.ts`.
@@ -28,13 +28,13 @@ export default function main(io: Summon.IO) {
   const N = io.inputPublic('N', summon.number());
 
   const ballots = range(0, N).map(
-    i => io.input(`party${i}`, `ballot${i}`, summon.number())
+    i => io.input(`party${i}`, `ballot${i}`, summon.bool())
   );
 
-  io.outputPublic('result', impl(ballots) ? 1 : 0);
+  io.outputPublic('result', impl(ballots));
 }
 
-function impl(ballots: number[]) {
-  const sum = treeSum(ballots, b => b !== 0 ? 1 : 0);
+function impl(ballots: boolean[]) {
+  const sum = treeSum(ballots, b => b ? 1 : 0);
   return sum * 3 >= ballots.length * 2;
 }

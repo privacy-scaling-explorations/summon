@@ -1,4 +1,4 @@
-use std::{cmp::max, collections::BTreeMap};
+use std::{cmp::max, collections::BTreeMap, fmt};
 
 use crate::{binary_op::BinaryOp, unary_op::UnaryOp};
 use bristol_circuit::{BristolCircuit, CircuitInfo, ConstantInfo, Gate as BristolGate, IOInfo};
@@ -232,65 +232,106 @@ pub trait CircuitNumber: Clone {
   fn binary_op(op: BinaryOp, left: &Self, right: &Self) -> Self;
 }
 
-impl CircuitNumber for usize {
+#[derive(Clone, Debug)]
+pub enum NumberOrBool {
+  Number(usize),
+  Bool(bool),
+}
+
+impl NumberOrBool {
+  fn as_usize(&self) -> usize {
+    match self {
+      NumberOrBool::Number(x) => *x,
+      NumberOrBool::Bool(x) => *x as usize,
+    }
+  }
+
+  fn as_bool(&self) -> bool {
+    match self {
+      NumberOrBool::Number(x) => *x != 0,
+      NumberOrBool::Bool(x) => *x,
+    }
+  }
+}
+
+impl PartialEq for NumberOrBool {
+  fn eq(&self, other: &Self) -> bool {
+    match (self, other) {
+      (NumberOrBool::Number(a), NumberOrBool::Number(b)) => a == b,
+      (NumberOrBool::Bool(a), NumberOrBool::Bool(b)) => a == b,
+      _ => false, // Different variants are not equal
+    }
+  }
+}
+
+impl fmt::Display for NumberOrBool {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    match self {
+      NumberOrBool::Number(x) => write!(f, "{}", x),
+      NumberOrBool::Bool(x) => write!(f, "{}", x),
+    }
+  }
+}
+
+impl CircuitNumber for NumberOrBool {
   fn zero() -> Self {
-    0
+    NumberOrBool::Number(0)
   }
 
   fn from_json(x: &serde_json::Value) -> Self {
     if let Some(x) = x.as_u64() {
-      return x as usize;
+      return NumberOrBool::Number(x as usize);
     }
 
     if let Some(x) = x.as_bool() {
-      return if x { 1 } else { 0 };
+      return NumberOrBool::Bool(x);
     }
 
-    panic!("Couldn't convert to usize: {}", x);
+    panic!("Couldn't convert to NumberOrBool: {}", x);
   }
 
-  // fn from_usize(x: usize) -> Self {
-  //   x
-  // }
-
   fn unary_op(op: UnaryOp, input: &Self) -> Self {
-    let input = *input;
-
     match op {
-      UnaryOp::Plus => input,
-      UnaryOp::Minus => 0usize.wrapping_sub(input),
-      UnaryOp::Not => (input == 0) as usize,
-      UnaryOp::BitNot => !input,
+      UnaryOp::Plus => input.clone(),
+      UnaryOp::Minus => NumberOrBool::Number(0usize.wrapping_sub(input.as_usize())),
+      UnaryOp::Not => match input {
+        NumberOrBool::Number(x) => NumberOrBool::Number(!x),
+        NumberOrBool::Bool(x) => NumberOrBool::Bool(!x),
+      },
+      UnaryOp::BitNot => NumberOrBool::Number(!input.as_usize()),
     }
   }
 
   fn binary_op(op: BinaryOp, left: &Self, right: &Self) -> Self {
-    let left = *left;
-    let right = *right;
-
     match op {
-      BinaryOp::Plus => left.wrapping_add(right),
-      BinaryOp::Minus => left.wrapping_sub(right),
-      BinaryOp::Mul => left.wrapping_mul(right),
-      BinaryOp::Div => left / right,
-      BinaryOp::Mod => left % right,
-      BinaryOp::Exp => left.wrapping_pow(right as u32),
-      BinaryOp::LooseEq => (left == right) as usize,
-      BinaryOp::LooseNe => (left != right) as usize,
-      BinaryOp::Eq => (left == right) as usize,
-      BinaryOp::Ne => (left != right) as usize,
-      BinaryOp::And => (left != 0 && right != 0) as usize,
-      BinaryOp::Or => (left != 0 || right != 0) as usize,
-      BinaryOp::Less => (left < right) as usize,
-      BinaryOp::LessEq => (left <= right) as usize,
-      BinaryOp::Greater => (left > right) as usize,
-      BinaryOp::GreaterEq => (left >= right) as usize,
-      BinaryOp::BitAnd => left & right,
-      BinaryOp::BitOr => left | right,
-      BinaryOp::BitXor => left ^ right,
-      BinaryOp::LeftShift => left.wrapping_shl(right as u32),
-      BinaryOp::RightShift => left.wrapping_shr(right as u32),
-      BinaryOp::RightShiftUnsigned => left.wrapping_shr(right as u32),
+      BinaryOp::Plus => NumberOrBool::Number(left.as_usize().wrapping_add(right.as_usize())),
+      BinaryOp::Minus => NumberOrBool::Number(left.as_usize().wrapping_sub(right.as_usize())),
+      BinaryOp::Mul => NumberOrBool::Number(left.as_usize().wrapping_mul(right.as_usize())),
+      BinaryOp::Div => NumberOrBool::Number(left.as_usize() / right.as_usize()),
+      BinaryOp::Mod => NumberOrBool::Number(left.as_usize() % right.as_usize()),
+      BinaryOp::Exp => NumberOrBool::Number(left.as_usize().wrapping_pow(right.as_usize() as u32)),
+      BinaryOp::LooseEq => NumberOrBool::Bool(left.as_usize() == right.as_usize()),
+      BinaryOp::LooseNe => NumberOrBool::Bool(left.as_usize() != right.as_usize()),
+      BinaryOp::Eq => NumberOrBool::Bool(left.as_usize() == right.as_usize()),
+      BinaryOp::Ne => NumberOrBool::Bool(left.as_usize() != right.as_usize()),
+      BinaryOp::And => NumberOrBool::Bool(left.as_bool() && right.as_bool()),
+      BinaryOp::Or => NumberOrBool::Bool(left.as_bool() || right.as_bool()),
+      BinaryOp::Less => NumberOrBool::Bool(left.as_usize() < right.as_usize()),
+      BinaryOp::LessEq => NumberOrBool::Bool(left.as_usize() <= right.as_usize()),
+      BinaryOp::Greater => NumberOrBool::Bool(left.as_usize() > right.as_usize()),
+      BinaryOp::GreaterEq => NumberOrBool::Bool(left.as_usize() >= right.as_usize()),
+      BinaryOp::BitAnd => NumberOrBool::Number(left.as_usize() & right.as_usize()),
+      BinaryOp::BitOr => NumberOrBool::Number(left.as_usize() | right.as_usize()),
+      BinaryOp::BitXor => NumberOrBool::Number(left.as_usize() ^ right.as_usize()),
+      BinaryOp::LeftShift => {
+        NumberOrBool::Number(left.as_usize().wrapping_shl(right.as_usize() as u32))
+      }
+      BinaryOp::RightShift => {
+        NumberOrBool::Number(left.as_usize().wrapping_shr(right.as_usize() as u32))
+      }
+      BinaryOp::RightShiftUnsigned => {
+        NumberOrBool::Number(left.as_usize().wrapping_shr(right.as_usize() as u32))
+      }
     }
   }
 }

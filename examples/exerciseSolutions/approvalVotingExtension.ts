@@ -7,13 +7,8 @@
 // most approvals.
 //
 // Example:
-//! test { nParties: 6, nOptions: 3 } [1, 1, 0,   1, 1, 0,   0, 1, 0,   0, 1, 1,   0, 1, 1,   0, 1, 1] => [1]
-//! test { nParties: 3, nOptions: 5 } [0, 0, 0, 1, 0,   1, 0, 0, 1, 0,   1, 0, 0, 1, 0] => [3]
-//
-// Output meanings:
-//   0: Steak Shack
-//   1: Burger Barn
-//   2: Veggie Villa
+//! test { nParties: 6, nOptions: 3 } [ true,  true, false,    true,  true, false,   false,  true, false,   false,  true,  true,   false,  true,  true,   false,  true,  true] => [1]
+//! test { nParties: 3, nOptions: 5 } [false, false, false,  true, false,    true, false, false,  true, false,    true, false, false,  true, false] => [3]
 
 import range from "../lib/range.ts";
 import treeReduce from "../lib/treeReduce.ts";
@@ -27,17 +22,17 @@ export default function main(io: Summon.IO) {
   io.outputPublic('result', impl(nOptions, ballots));
 }
 
-function inputBallot(io: Summon.IO, partyIndex: number, nOptions: number): number[] {
+function inputBallot(io: Summon.IO, partyIndex: number, nOptions: number): boolean[] {
   return range(0, nOptions).map(
-    i => io.input(`party${partyIndex}`, `party${partyIndex}Option${i}`, summon.number()) !== 0 ? 1 : 0
+    i => io.input(`party${partyIndex}`, `party${partyIndex}Option${i}`, summon.bool())
   );
 }
 
-function impl(nOptions: number, ballots: number[][]) {
+function impl(nOptions: number, ballots: boolean[][]) {
   const ballotSums = range(0, nOptions).map(
     optionIndex => ({
       optionIndex,
-      count: treeSum(ballots, b => b[optionIndex]),
+      count: treeSum(ballots, b => b[optionIndex] ? 1 : 0),
     }),
   );
 
