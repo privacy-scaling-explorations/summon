@@ -9,7 +9,6 @@ use boolify::boolify;
 use serde_json::to_string_pretty;
 use summon_cli::handle_diagnostics_cli;
 use summon_compiler::{bristol_depth, compile, resolve_entry_path, CompileOk};
-use summon_vm::vs_value::Val;
 
 fn main() {
   let args: Vec<String> = std::env::args().collect();
@@ -38,16 +37,11 @@ fn main() {
 
   let entry_point = resolve_entry_path(&args[1]);
 
-  let public_inputs: HashMap<String, Val> = if let Some(path) = public_inputs_path {
+  let public_inputs: HashMap<String, serde_json::Value> = if let Some(path) = public_inputs_path {
     if path.get(0..1) == Some("{") {
       // if the first character is '{', we assume it's a json string
-      let numbers = serde_json::from_str::<HashMap<String, serde_json::Value>>(&path)
-        .expect("Failed to parse public inputs string");
-
-      numbers
-        .into_iter()
-        .map(|(k, v)| (k, Val::from_json(&v)))
-        .collect::<HashMap<_, _>>()
+      serde_json::from_str::<HashMap<String, serde_json::Value>>(&path)
+        .expect("Failed to parse public inputs string")
     } else {
       let path = Path::new(&path);
 
@@ -58,20 +52,14 @@ fn main() {
 
       let file = File::open(path).expect("Failed to open public inputs file");
 
-      // only numbers for now
-      let numbers = serde_json::from_reader::<_, HashMap<String, serde_json::Value>>(file)
-        .expect("Failed to parse public inputs file");
-
-      numbers
-        .into_iter()
-        .map(|(k, v)| (k, Val::from_json(&v)))
-        .collect::<HashMap<_, _>>()
+      serde_json::from_reader::<_, HashMap<String, serde_json::Value>>(file)
+        .expect("Failed to parse public inputs file")
     }
   } else {
     HashMap::new()
   };
 
-  let compile_result = compile(&public_inputs, entry_point, |path| {
+  let compile_result = compile(entry_point, &public_inputs, |path| {
     fs::read_to_string(path).map_err(|e| e.to_string())
   });
 

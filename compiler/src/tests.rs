@@ -6,10 +6,7 @@ mod tests_ {
     path::PathBuf,
   };
 
-  use summon_vm::{
-    circuit::{CircuitInput, CircuitNumber, NumberOrBool},
-    vs_value::{ToVal, Val},
-  };
+  use summon_vm::circuit::{CircuitInput, CircuitNumber, NumberOrBool};
 
   use crate::{compile, resolve_entry_path::resolve_entry_path, DiagnosticsByPath};
 
@@ -30,7 +27,7 @@ mod tests_ {
 
       let path = resolve_entry_path(path);
 
-      let compile_result = compile(public_inputs, path.clone(), |p| {
+      let compile_result = compile(path.clone(), public_inputs, |p| {
         fs::read_to_string(p).map_err(|e| e.to_string())
       });
 
@@ -96,7 +93,7 @@ mod tests_ {
   struct TestCase {
     path: String,
     descriptor: String,
-    public_inputs: HashMap<String, Val>,
+    public_inputs: HashMap<String, serde_json::Value>,
     input: Vec<serde_json::Value>,
     expected_output: Vec<serde_json::Value>,
   }
@@ -135,7 +132,7 @@ mod tests_ {
         let val = val_str
           .parse::<usize>()
           .unwrap_or_else(|_| panic!("invalid usize `{}` in public_inputs", val_str));
-        public_inputs.insert(key, (val as f64).to_val());
+        public_inputs.insert(key, val.into());
       }
 
       // advance rest past the '}' and any following whitespace
