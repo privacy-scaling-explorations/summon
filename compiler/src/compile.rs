@@ -36,8 +36,8 @@ pub struct CompileLinkedModuleResult {
 }
 
 pub fn compile<ReadFile>(
-  public_inputs: &HashMap<String, Val>,
   path: ResolvedPath,
+  public_inputs: &HashMap<String, serde_json::Value>,
   read_file: ReadFile,
 ) -> CompileResult
 where
@@ -66,7 +66,13 @@ where
   }
 
   let id_gen = Rc::new(RefCell::new(IdGenerator::new()));
-  let io = SummonIO::new(public_inputs, &id_gen);
+
+  let public_inputs = public_inputs
+    .iter()
+    .map(|(name, value)| (name.clone(), Val::from_json(value)))
+    .collect::<HashMap<_, _>>();
+
+  let io = SummonIO::new(&public_inputs, &id_gen);
   run(main, &io);
 
   for unused_input in io.unused_public_inputs() {
