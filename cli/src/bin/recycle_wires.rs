@@ -7,7 +7,7 @@
 //
 // ─────────────────────────────────────────────────────────────────────────────
 use std::{
-  collections::{HashMap, HashSet, VecDeque},
+  collections::{HashMap, VecDeque},
   error::Error,
   fmt::{self, Display, Formatter, Write},
   fs::File,
@@ -147,108 +147,138 @@ impl BristolCircuit {
   }
 }
 
-// ────────────────────── Recycling Algorithm ───────────────────────────────
-fn last_uses(gates: &[Gate]) -> HashMap<usize, usize> {
-  let mut last = HashMap::new();
-  for (idx, g) in gates.iter().enumerate() {
-    for &w in &g.ins {
-      last.insert(w, idx);
-    }
-  }
-  last
+/// All original input-wire indices from the header (0 … total_inputs-1).
+fn input_len(hdr: &Header) -> Result<usize, Box<dyn Error>> {
+  let lens = input_lengths(hdr)?; // helper from the TS backend
+  Ok(lens.iter().sum())
 }
 
 /// Produce a *new* circuit whose wires are recycled.
-fn recycle(circ: &BristolCircuit) -> BristolCircuit {
-  // Identify input wires (never produced).
-  let mut produced = HashSet::<usize>::new();
-  for g in &circ.gates {
-    produced.extend(&g.outs);
+fn recycle(circ: &BristolCircuit) -> Result<BristolCircuit, Box<dyn Error>> {
+  let in_len = input_len(&circ.header)?;
+  let out_len = output_length(&circ.header)?;
+
+  let is_output_wire = |w: usize| w >= circ.header.nwires - out_len;
+
+  let mut wire_map = HashMap::<usize, usize>::new();
+  let mut next_wire: usize = 0;
+  let mut recycling_pool = VecDeque::<usize>::new();
+
+  #[allow(clippy::explicit_counter_loop)]
+  for i in 0..in_len {
+    wire_map.insert(i, next_wire);
+    next_wire += 1;
   }
-  let mut inputs = HashSet::<usize>::new();
-  for g in &circ.gates {
-    for &w in &g.ins {
-      if !produced.contains(&w) {
-        inputs.insert(w);
+
+  // old wire id => last gate as input
+  let mut last_uses_by_wire = HashMap::<usize, usize>::new();
+
+  for (gate_index, gate) in circ.gates.iter().enumerate() {
+    for in_ in &gate.ins {
+      last_uses_by_wire.insert(*in_, gate_index);
+    }
+  }
+
+  for i in 0..in_len {
+    if !last_uses_by_wire.contains_key(&i) {
+      let mapped = *wire_map.get(&i).expect("expected input wire to be mapped");
+      assert_eq!(i, mapped);
+
+      // if the input wire is not used, put the mapped wire in the recycling pool
+      recycling_pool.push_back(mapped);
+      eprintln!("input wire {} was not used", i);
+    }
+  }
+
+  for i in 0..out_len {
+    let old_wire_id = circ.header.nwires - out_len + i;
+
+    // pretend the output wire is used again after the end of the circuit
+    // (since it kinda is, just not by a gate)
+    // this prevents us putting output wires into the recycling pool
+    last_uses_by_wire.insert(old_wire_id, circ.gates.len());
+  }
+
+  let mut last_uses_by_gate = vec![vec![]; circ.gates.len() + 1];
+
+  for (old_wire_id, gate_index) in last_uses_by_wire {
+    last_uses_by_gate[gate_index].push(old_wire_id);
+  }
+
+  for (gate_index, gate) in circ.gates.iter().enumerate() {
+    for out in &gate.outs {
+      if is_output_wire(*out) {
+        // don't map output wires here
+        // we do that later when we know where to put them
+        continue;
       }
-    }
-  }
 
-  let last = last_uses(&circ.gates);
-  let mut map = HashMap::<usize, usize>::new();
-  for &w in &inputs {
-    map.insert(w, w);
-  }
-
-  let mut next_reg = inputs.iter().max().map(|&m| m + 1).unwrap_or(0);
-  let mut free: VecDeque<usize> = VecDeque::new();
-  let mut new_gates = Vec::with_capacity(circ.gates.len());
-
-  for (idx, g) in circ.gates.iter().enumerate() {
-    let mut ins_regs = Vec::with_capacity(g.k);
-    for &orig in &g.ins {
-      ins_regs.push(*map.get(&orig).expect("wire before def"));
-    }
-    let mut outs_regs = Vec::with_capacity(g.l);
-    for &orig in &g.outs {
-      let reg = free.pop_front().unwrap_or_else(|| {
-        let r = next_reg;
-        next_reg += 1;
-        r
-      });
-      map.insert(orig, reg);
-      outs_regs.push(reg);
-    }
-    for &orig in &g.ins {
-      if last.get(&orig).copied() == Some(idx) && !inputs.contains(&orig) {
-        if let Some(reg) = map.remove(&orig) {
-          free.push_back(reg);
+      let out_mapped = match recycling_pool.pop_front() {
+        Some(recycled) => recycled,
+        None => {
+          let new_wire_id = next_wire;
+          next_wire += 1;
+          new_wire_id
         }
-      }
+      };
+
+      wire_map.insert(*out, out_mapped);
     }
+
+    for expired_old_wire_id in &last_uses_by_gate[gate_index] {
+      let mapped = wire_map
+        .get(expired_old_wire_id)
+        .expect("expired wire should have been mapped");
+
+      recycling_pool.push_back(*mapped);
+    }
+  }
+
+  // Now that all other wires are mapped, we can map the output wires to
+  // where we now know the new wires end
+  for i in 0..out_len {
+    let old_wire_id = circ.header.nwires - out_len + i;
+    let new_wire_id = next_wire;
+    next_wire += 1;
+    wire_map.insert(old_wire_id, new_wire_id);
+  }
+
+  let mut new_gates = Vec::<Gate>::new();
+
+  for gate in &circ.gates {
     new_gates.push(Gate {
-      k: g.k,
-      l: g.l,
-      ins: ins_regs,
-      outs: outs_regs,
-      op: g.op.clone(),
+      k: gate.k,
+      l: gate.l,
+      ins: gate
+        .ins
+        .iter()
+        .map(|w| *wire_map.get(w).expect("unmapped wire"))
+        .collect(),
+      outs: gate
+        .outs
+        .iter()
+        .map(|w| *wire_map.get(w).expect("unmapped wire"))
+        .collect(),
+      op: gate.op.clone(),
     });
   }
 
-  // Live registers that are not preserved inputs become outputs.
-  let mut outs: Vec<usize> = map
-    .iter()
-    .filter(|(o, _)| !inputs.contains(*o))
-    .map(|(_, &r)| r)
-    .collect();
-  outs.sort_unstable();
-  let contiguous = outs.windows(2).all(|w| w[1] == w[0] + 1)
-    && outs.first().copied() == Some(next_reg - outs.len());
+  let ngates = new_gates.len();
+  let nwires = next_wire;
+  let mut new_raw_lines = vec![format!("{ngates} {nwires}")];
 
-  if !contiguous {
-    let start = next_reg;
-    let mut rename = HashMap::<usize, usize>::new();
-    for (i, &r) in outs.iter().enumerate() {
-      rename.insert(r, start + i);
-    }
-    next_reg += outs.len();
-    for gate in &mut new_gates {
-      for r in &mut gate.outs {
-        if let Some(&nr) = rename.get(r) {
-          *r = nr;
-        }
-      }
-    }
+  for i in 1..circ.header.raw.len() {
+    new_raw_lines.push(circ.header.raw[i].clone());
   }
 
-  let mut new_header = circ.header.clone();
-  new_header.ngates = new_gates.len();
-  new_header.nwires = next_reg;
-
-  BristolCircuit {
-    header: new_header,
+  Ok(BristolCircuit {
+    header: Header {
+      raw: new_raw_lines,
+      ngates: new_gates.len(),
+      nwires: next_wire,
+    },
     gates: new_gates,
-  }
+  })
 }
 
 /// Parse the second header line: “p n₀ n₁ …”.
@@ -370,7 +400,7 @@ fn main() -> Result<(), Box<dyn Error>> {
   }
   // process
   let circ = BristolCircuit::parse(&raw)?;
-  let recycled = recycle(&circ);
+  let recycled = recycle(&circ)?;
 
   // write
   if outfile == "-" {
