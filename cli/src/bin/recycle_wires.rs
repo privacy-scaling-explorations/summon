@@ -251,16 +251,6 @@ fn recycle(circ: &BristolCircuit) -> BristolCircuit {
   }
 }
 
-fn camel(id: &str) -> String {
-  let mut it = id.chars();
-  let mut out = String::from("use");
-  if let Some(c) = it.next() {
-    out.push(c.to_ascii_uppercase());
-  }
-  out.extend(it);
-  out
-}
-
 /// Parse the second header line: “p n₀ n₁ …”.
 fn input_lengths(hdr: &Header) -> Result<Vec<usize>, Box<dyn Error>> {
   let parts: Vec<_> = hdr
@@ -324,16 +314,10 @@ fn to_typescript(c: &BristolCircuit, stem: &str) -> Result<String, Box<dyn Error
   writeln!(
     out,
     "export default function {}({}): boolean[] {{",
-    camel(stem),
+    stem,
     sig.join(", ")
   )?;
   // length checks
-  writeln!(
-    out,
-    "  if (arguments.length !== {}) throw new Error(\"expected {} inputs\");",
-    inputs.len(),
-    inputs.len()
-  )?;
   for (i, &len) in inputs.iter().enumerate() {
     writeln!(
       out,
