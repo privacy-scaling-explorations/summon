@@ -9,7 +9,7 @@
 use std::{
   collections::{HashMap, VecDeque},
   error::Error,
-  fmt::{self, Display, Formatter, Write},
+  fmt::{self, Display, Formatter},
   fs::File,
   io::{self, Read, Write as IoWrite},
   path::Path,
@@ -316,63 +316,86 @@ fn output_length(hdr: &Header) -> Result<usize, Box<dyn Error>> {
   Ok(parts[1..].iter().map(|s| s.parse::<usize>().unwrap()).sum())
 }
 
-fn gate_ts(g: &Gate) -> String {
-  match g.op.as_str() {
-    "INV" if g.l == 1 => format!("w[{}] = !w[{}];", g.outs[0], g.ins[0]),
-    "XOR" if g.k == 2 && g.l == 1 => {
-      format!("w[{}] = w[{}] !== w[{}];", g.outs[0], g.ins[0], g.ins[1])
-    }
-    "AND" if g.k == 2 && g.l == 1 => {
-      format!("w[{}] = w[{}] && w[{}];", g.outs[0], g.ins[0], g.ins[1])
-    }
-    op => format!("/* TODO: {} {:?}→{:?} */", op, g.ins, g.outs),
-  }
-}
-
-/// Convert the circuit to TypeScript source.
+/// Generate TypeScript function for circuit
+///
+/// The generated TS looks like:
+///   const gates = [ [dst,'OP',in0,in1], … ];
+///   export default function stem(input0:…, …) { … }
 fn to_typescript(c: &BristolCircuit, stem: &str) -> Result<String, Box<dyn Error>> {
+  use std::fmt::Write as _;
+
   let inputs = input_lengths(&c.header)?;
   let out_len = output_length(&c.header)?;
-  let out_start = c.header.nwires - out_len; // ensured contiguous by `recycle`
+  let out_base = c.header.nwires - out_len; // contiguous after recycle()
 
-  let sig: Vec<String> = inputs
+  let mut ts = String::new();
+
+  // ── gates array ───────────────────────────────────────────────────────
+  ts.push_str("const gates = [\n");
+  for g in &c.gates {
+    match g.op.as_str() {
+      "INV" if g.l == 1 => {
+        writeln!(ts, "  [{}, 'INV', {}],", g.outs[0], g.ins[0])?;
+      }
+      "XOR" | "AND" if g.k == 2 && g.l == 1 => {
+        writeln!(
+          ts,
+          "  [{}, '{}', {}, {}],",
+          g.outs[0], g.op, g.ins[0], g.ins[1]
+        )?;
+      }
+      op => return Err(format!("unsupported op {op}").into()),
+    }
+  }
+  ts.push_str("];\n\n");
+
+  // ── function prelude ──────────────────────────────────────────────────
+  let params: Vec<_> = inputs
     .iter()
     .enumerate()
     .map(|(i, _)| format!("input{i}: boolean[]"))
     .collect();
-  let mut out = String::new();
   writeln!(
-    out,
-    "export default function {}({}): boolean[] {{",
-    stem,
-    sig.join(", ")
+    ts,
+    "export default function {stem}({}): boolean[] {{",
+    params.join(", ")
   )?;
+
   // length checks
   for (i, &len) in inputs.iter().enumerate() {
     writeln!(
-      out,
+      ts,
       "  if (input{i}.length !== {len}) throw new Error(\"input{i} length\");"
     )?;
   }
-  writeln!(out, "  const w: boolean[] = [];")?;
-  // copy inputs
-  writeln!(out, "  {{")?;
-  writeln!(out, "    let off = 0;")?;
+
+  // copy inputs into `w`
+  writeln!(ts, "  let w: boolean[] = [];")?;
+  writeln!(ts, "  {{")?;
+  writeln!(ts, "    let off = 0;")?;
   for (i, &len) in inputs.iter().enumerate() {
     writeln!(
-      out,
+      ts,
       "    for (let j = 0; j < {len}; ++j) w[off + j] = input{i}[j];"
     )?;
-    writeln!(out, "    off += {len};")?;
+    writeln!(ts, "    off += {len};")?;
   }
-  writeln!(out, "  }}")?;
-  // gates
-  for g in &c.gates {
-    writeln!(out, "  {}", gate_ts(g))?;
-  }
-  writeln!(out, "  return w.slice({out_start}, {out_start}+{out_len});")?;
-  writeln!(out, "}}")?;
-  Ok(out)
+  writeln!(ts, "  }}")?;
+
+  // gate interpreter
+  writeln!(ts, "  for (const [dst, op, in0, in1] of gates as any) {{")?;
+  writeln!(ts, "    switch (op) {{")?;
+  writeln!(ts, "      case 'INV': w[dst] = !w[in0]; break;")?;
+  writeln!(ts, "      case 'XOR': w[dst] = w[in0] !== w[in1]; break;")?;
+  writeln!(ts, "      case 'AND': w[dst] = w[in0] && w[in1]; break;")?;
+  writeln!(ts, "    }}")?;
+  writeln!(ts, "  }}")?;
+
+  // outputs
+  writeln!(ts, "  return w.slice({out_base}, {out_base} + {out_len});")?;
+  writeln!(ts, "}}")?;
+
+  Ok(ts)
 }
 
 // ───────────────────────────── CLI driver ──────────────────────────────────
