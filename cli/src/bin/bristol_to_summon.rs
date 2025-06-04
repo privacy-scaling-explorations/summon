@@ -1,10 +1,5 @@
-// wire_recycler.rs — read an Extended‑Bristol circuit from stdin, recycle
-// registers, and emit the new circuit.
-//
-// * `BristolCircuit` is now `Display`‑able; `fmt()` writes the full text
-//   representation, so callers can simply `println!("{}", circuit)`.
-// * The old inherent `to_string` has been removed.
-//
+// bristol_to_summon.rs — read an Extended‑Bristol circuit, recycle registers,
+// and emit the new circuit.
 // ─────────────────────────────────────────────────────────────────────────────
 use std::{
   collections::{HashMap, VecDeque},
@@ -328,8 +323,7 @@ fn to_typescript(c: &BristolCircuit, stem: &str) -> Result<String, Box<dyn Error
   let out_len = output_length(&c.header)?;
   let out_base = c.header.nwires - out_len; // contiguous after recycle()
 
-  let mut ts =
-    "/** generated from bristol circuit using recycle_wires in Summon project */\n".to_string();
+  let mut ts = "/** generated using bristol_to_summon */\n".to_string();
 
   // ── function prelude ──────────────────────────────────────────────────
   let params: Vec<_> = inputs
