@@ -546,7 +546,9 @@ impl LocationMap {
     self.references.entry(ref_).or_default().push(output.len());
 
     output.push(0xff);
-    output.push(0xff); // TODO: Support >65535
+    output.push(0xff);
+    output.push(0xff);
+    output.push(0xff);
   }
 
   fn resolve(&self, output: &mut [u8]) {
@@ -564,8 +566,11 @@ impl LocationMap {
       let location = location_optional.unwrap();
 
       for ref_location in ref_locations {
-        output[*ref_location] = (*location % 256) as u8;
-        output[*ref_location + 1] = (*location / 256) as u8; // TODO: Support >65535
+        let mut loc = *location;
+        for i in 0..4 {
+          output[*ref_location + i] = (loc % 256) as u8;
+          loc /= 256;
+        }
       }
     }
   }
