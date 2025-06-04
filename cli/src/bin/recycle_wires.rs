@@ -328,26 +328,8 @@ fn to_typescript(c: &BristolCircuit, stem: &str) -> Result<String, Box<dyn Error
   let out_len = output_length(&c.header)?;
   let out_base = c.header.nwires - out_len; // contiguous after recycle()
 
-  let mut ts = String::new();
-
-  // ── gates array ───────────────────────────────────────────────────────
-  ts.push_str("const gates = [\n");
-  for g in &c.gates {
-    match g.op.as_str() {
-      "INV" if g.l == 1 => {
-        writeln!(ts, "  [{}, 'INV', {}],", g.outs[0], g.ins[0])?;
-      }
-      "XOR" | "AND" if g.k == 2 && g.l == 1 => {
-        writeln!(
-          ts,
-          "  [{}, '{}', {}, {}],",
-          g.outs[0], g.op, g.ins[0], g.ins[1]
-        )?;
-      }
-      op => return Err(format!("unsupported op {op}").into()),
-    }
-  }
-  ts.push_str("];\n\n");
+  let mut ts =
+    "/** generated from bristol circuit using recycle_wires in Summon project */\n".to_string();
 
   // ── function prelude ──────────────────────────────────────────────────
   let params: Vec<_> = inputs
@@ -365,22 +347,25 @@ fn to_typescript(c: &BristolCircuit, stem: &str) -> Result<String, Box<dyn Error
   for (i, &len) in inputs.iter().enumerate() {
     writeln!(
       ts,
-      "  if (input{i}.length !== {len}) throw new Error(\"input{i} length\");"
+      "  if (input{i}.length !== {len}) {{ throw new Error(\"input{i} length\"); }}"
     )?;
   }
+  writeln!(ts)?;
 
-  // copy inputs into `w`
-  writeln!(ts, "  let w: boolean[] = [];")?;
-  writeln!(ts, "  {{")?;
-  writeln!(ts, "    let off = 0;")?;
-  for (i, &len) in inputs.iter().enumerate() {
-    writeln!(
-      ts,
-      "    for (let j = 0; j < {len}; ++j) w[off + j] = input{i}[j];"
-    )?;
-    writeln!(ts, "    off += {len};")?;
-  }
-  writeln!(ts, "  }}")?;
+  let param_spread_names: Vec<_> = inputs
+    .iter()
+    .enumerate()
+    .map(|(i, _)| format!("...input{i}"))
+    .collect();
+
+  // init `w` with inputs
+  writeln!(ts, "  let w = [{}];", param_spread_names.join(", "))?;
+  writeln!(
+    ts,
+    "  while (w.length < {}) {{ w.push(false); }}",
+    c.header.nwires
+  )?;
+  writeln!(ts)?;
 
   // gate interpreter
   writeln!(ts, "  for (const [dst, op, in0, in1] of gates as any) {{")?;
@@ -390,10 +375,31 @@ fn to_typescript(c: &BristolCircuit, stem: &str) -> Result<String, Box<dyn Error
   writeln!(ts, "      case 'AND': w[dst] = w[in0] && w[in1]; break;")?;
   writeln!(ts, "    }}")?;
   writeln!(ts, "  }}")?;
+  writeln!(ts)?;
 
   // outputs
   writeln!(ts, "  return w.slice({out_base}, {out_base} + {out_len});")?;
   writeln!(ts, "}}")?;
+
+  // ── gates array ───────────────────────────────────────────────────────
+  ts.push('\n');
+  ts.push_str("const gates = [\n");
+  for g in &c.gates {
+    match g.op.as_str() {
+      "INV" if g.l == 1 => {
+        writeln!(ts, "  [{}, 'INV', {}],", g.outs[0], g.ins[0])?;
+      }
+      "XOR" | "AND" if g.k == 2 && g.l == 1 => {
+        writeln!(
+          ts,
+          "  [{}, '{}', {}, {}],",
+          g.outs[0], g.op, g.ins[0], g.ins[1]
+        )?;
+      }
+      op => return Err(format!("unsupported op {op}").into()),
+    }
+  }
+  ts.push_str("];\n");
 
   Ok(ts)
 }
