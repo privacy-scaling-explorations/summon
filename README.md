@@ -2,7 +2,9 @@
 
 _A language for collaboratively summoning computations._
 
-Based on [ValueScript](https://github.com/voltrevo/ValueScript).
+## About
+
+Summon is a dialect of TypeScript. It uses the same syntax, but compiles to arithmetic and boolean circuits, and has other important differences. It's part of the [MPC Framework](https://mpc.pse.dev) project, and is a fork of [ValueScript](https://github.com/voltrevo/ValueScript).
 
 ## Setup
 
