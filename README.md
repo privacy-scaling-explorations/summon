@@ -9,7 +9,7 @@ Summon is a dialect of TypeScript. It uses the same syntax, but compiles to arit
 ## Setup
 
 ```sh
-cargo build # Note: Not a rust user? You might prefer the NodeJS version further down
+cargo build
 export PATH="$PATH:$PWD/target/debug"
 ```
 
@@ -25,28 +25,14 @@ This will generate the circuit in
 `output/circuit_info.json`.
 
 You can also produce boolean circuits by adding `--boolify-width 16`. (See
-[boolify](https://github.com/voltrevo/boolify) for more about boolean circuits.)
+[boolify](https://github.com/privacy-scaling-explorations/boolify) for more
+about boolean circuits.)
 
-### NodeJS
+### TypeScript Bindings
 
-Runs via WebAssembly so you don't need a rust environment on your system.
-
-See
-[`@mpc-cli/summon`](https://github.com/cedoor/mpc-cli/tree/main/packages/cli-summon).
-
-```sh
-npx @mpc-cli/summon main.ts
-```
-
-or
-
-```sh
-npm i -g @mpc-cli/summon
-summonc main.ts
-```
-
-There is also a NodeJS API:
-[`summon-ts`](https://github.com/voltrevo/summon-ts).
+Summon also has TypeScript bindings! This means you can create an MPC app from
+end to end in TypeScript. See
+[`summon-ts`](https://github.com/privacy-scaling-explorations/summon-ts).
 
 ## Example
 
@@ -196,13 +182,67 @@ have prepared some exercises you might find interesting:
 - [Asset Swap](./examples/exercises/assetSwap.ts)
 - [Poker Hands](./examples/exercises/pokerHands.ts)
 
-[Solutions](https://github.com/voltrevo/summon/tree/exercise-solutions/examples/exerciseSolutions).
+[Solutions](https://github.com/privacy-scaling-explorations/summon/tree/exercise-solutions/examples/exerciseSolutions).
 
 ## `summon` APIs
 
 In Summon you have access to a special global called `summon`. If you're running
 TypeScript, you can copy `summon.d.ts` into your project to get accurate type
 information.
+
+## External Bristol Circuits
+
+If you want to use a special boolean function which is available in
+[brisol format](https://nigelsmart.github.io/MPC-Circuits/), then you can
+convert it to Summon like this:
+
+```sh
+cargo run --bin bristol_to_summon -- -i sha256.txt -o sha256.ts
+```
+
+```ts
+/** generated using bristol_to_summon */
+export default function sha256(
+  input0: boolean[],
+  input1: boolean[],
+): boolean[] {
+  if (input0.length !== 512) throw new Error("input0 length");
+  if (input1.length !== 256) throw new Error("input1 length");
+
+  let w = [...input0, ...input1];
+  while (w.length < 1759) w.push(false);
+
+  for (const [dst, op, in0, in1] of gates as any) {
+    switch (op) {
+      case "INV":
+        w[dst] = !w[in0];
+        break;
+      case "XOR":
+        w[dst] = w[in0] !== w[in1];
+        break;
+      case "AND":
+        w[dst] = w[in0] && w[in1];
+        break;
+    }
+  }
+
+  return w.slice(1503, 1503 + 256);
+}
+
+const gates = [
+  [768, "AND", 416, 576],
+  [769, "XOR", 416, 576],
+  [770, "XOR", 417, 577],
+  [771, "XOR", 418, 578],
+  [772, "XOR", 419, 579],
+  // etc
+];
+```
+
+This particular circuit is available as `sha256/mod.ts` in
+[summon-lib](https://github.com/privacy-scaling-explorations/summon-lib). It
+also comes wrapped in a function which correctly implements chunking and padding
+so you can easily calculate sha256 over any number of bits.
 
 ## Why "Summon"
 
