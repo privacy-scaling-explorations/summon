@@ -4,6 +4,7 @@ mod tests_ {
     collections::{BTreeMap, HashMap},
     fs,
     path::PathBuf,
+    process::Command,
   };
 
   use summon_vm::circuit::{CircuitInput, CircuitNumber, NumberOrBool};
@@ -12,6 +13,14 @@ mod tests_ {
 
   #[test]
   fn test_annotations() {
+    let fetch_status = Command::new("../examples/fetch_deps.sh")
+      .status()
+      .expect("Failed to run fetch_deps.sh");
+
+    if !fetch_status.success() {
+      panic!("fetch_deps not successful");
+    }
+
     let test_cases = find_test_cases("../examples");
 
     for test_case in &test_cases {
